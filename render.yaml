@@ -1,0 +1,60 @@
+services:
+  # Backend API Service
+  - type: web
+    name: thealankriti-backend
+    runtime: node
+    plan: free
+    buildCommand: cd backend && npm install
+    startCommand: cd backend && npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: MONGODB_URI
+        value: mongodb+srv://thealankriti_db_user:ZwHIC6cxgHdKzy50@thealankriti.b27onwb.mongodb.net/?retryWrites=true&w=majority&appName=thealankriti
+      - key: JWT_SECRET
+        value: The-Alankriti-jewells-super-secret-key-2024-production
+      - key: JWT_EXPIRE
+        value: 7d
+      - key: ADMIN_EMAIL
+        value: bewithu.aj@gmail.com
+      - key: ADMIN_PASSWORD
+        value: admin123
+      - key: SESSION_SECRET
+        value: The-Alankriti-jewells-session-secret-key-2024-production
+      - key: CLIENT_URL
+        fromService:
+          type: web
+          name: thealankriti-frontend
+          property: url
+      - key: UPLOAD_PATH
+        value: uploads/
+      - key: MAX_FILE_SIZE
+        value: 5242880
+      - key: EMAIL_SERVICE
+        value: gmail
+      - key: EMAIL_USER
+        value: your_email@gmail.com
+      - key: EMAIL_PASS
+        value: your_app_password_here
+      - key: EMAIL_FROM
+        value: The Alankriti <your_email@gmail.com>
+    healthCheckPath: /health
+    
+  # Frontend Web Service
+  - type: web
+    name: thealankriti-frontend
+    runtime: static
+    buildCommand: cd frontend && npm install && REACT_APP_API_URL=$THEALANKRITI_BACKEND_URL/api npm run build
+    staticPublishPath: frontend/build
+    envVars:
+      - key: THEALANKRITI_BACKEND_URL
+        fromService:
+          type: web
+          name: thealankriti-backend
+          property: url
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
