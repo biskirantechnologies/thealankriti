@@ -1,9 +1,12 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
+require('dotenv').config();
 
-// Connect to MongoDB
-mongoose.connect('mongodb://localhost:27017/The Alankriti_jewells')
-  .then(() => console.log('📊 MongoDB Connected'))
+// Connect to MongoDB Atlas
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://thealankriti_db_user:ZwHIC6cxgHdKzy50@thealankriti.b27onwb.mongodb.net/?retryWrites=true&w=majority&appName=thealankriti';
+
+mongoose.connect(MONGODB_URI)
+  .then(() => console.log('📊 MongoDB Atlas Connected'))
   .catch(err => console.error('MongoDB connection error:', err));
 
 // User schema

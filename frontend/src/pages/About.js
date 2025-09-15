@@ -111,7 +111,7 @@ const About = () => {
                   The Alankriti was born from Ankita Thakur's passion for jewelry and her 
                   entrepreneurial spirit. Starting as a young dreamer with an eye for beautiful 
                   accessories, Ankita transformed her love for jewelry into a thriving business 
-                  based in the heart of Balumari, Lalitpur.
+                  based in the heart of Balkumari, Lalitpur.
                 </p>
                 <p>
                   "Jewelry isn't just an accessory—it's a form of self-expression, a way to celebrate 

@@ -24,7 +24,10 @@ services:
       - key: SESSION_SECRET
         value: The-Alankriti-jewells-session-secret-key-2024-production
       - key: CLIENT_URL
-        value: https://thealankriti-frontend.onrender.com
+        fromService:
+          type: web
+          name: thealankriti-frontend
+          property: url
       - key: UPLOAD_PATH
         value: uploads/
       - key: MAX_FILE_SIZE
@@ -43,8 +46,14 @@ services:
   - type: web
     name: thealankriti-frontend
     runtime: static
-    buildCommand: cd frontend && npm install && REACT_APP_API_URL=https://thealankriti-backend.onrender.com/api npm run build
+    buildCommand: cd frontend && npm install && REACT_APP_API_URL=$THEALANKRITI_BACKEND_URL/api npm run build
     staticPublishPath: frontend/build
+    envVars:
+      - key: THEALANKRITI_BACKEND_URL
+        fromService:
+          type: web
+          name: thealankriti-backend
+          property: url
     routes:
       - type: rewrite
         source: /*

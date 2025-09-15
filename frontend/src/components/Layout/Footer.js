@@ -97,7 +97,7 @@ const Footer = () => {
               <div className="flex items-start">
                 <MapPinIcon className="h-5 w-5 text-amber-400 mr-3 mt-1 flex-shrink-0" />
                 <span>
-                  Balumari, Lalitpur<br />
+                  Balkumari, Lalitpur<br />
                   Nepal
                 </span>
               </div>
