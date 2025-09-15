@@ -1,0 +1,57 @@
+{
+  "version": 2,
+  "buildCommand": "cd frontend && npm ci --force && npm run build",
+  "outputDirectory": "frontend/build",
+  "functions": {
+    "api/index.js": {
+      "maxDuration": 30
+    }
+  },
+  "headers": [
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache, no-store, must-revalidate"
+        },
+        {
+          "key": "Pragma",
+          "value": "no-cache"
+        },
+        {
+          "key": "Expires",
+          "value": "0"
+        }
+      ]
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "/api/index.js"
+    },
+    {
+      "source": "/health",
+      "destination": "/api/index.js"
+    }
+  ],
+  "env": {
+    "MONGODB_URI": "mongodb+srv://Vercel-Admin-oraclebrain:FnrDZcHJ4huFjtjw@oraclebrain.a8q7u5w.mongodb.net/?retryWrites=true&w=majority",
+    "JWT_SECRET": "The Alankriti-jewells-super-secret-key-2024",
+    "NODE_ENV": "production",
+    "ADMIN_EMAIL": "bewithu.aj@gmail.com",
+    "ADMIN_PASSWORD": "admin123",
+    "SESSION_SECRET": "The Alankriti-jewells-session-secret-key-2024",
+    "DISABLE_ESLINT_PLUGIN": "true",
+    "CI": "false",
+    "GENERATE_SOURCEMAP": "false"
+  },
+  "git": {
+    "deploymentEnabled": {
+      "main": true,
+      "gh-pages": false
+    }
+  },
+  "public": true
+}

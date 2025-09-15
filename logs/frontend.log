@@ -1,0 +1,126 @@
+
+> TheAlankriti-jewells-frontend@1.0.0 start
+> react-scripts start
+
+(node:14821) [DEP0176] DeprecationWarning: fs.F_OK is deprecated, use fs.constants.F_OK instead
+(Use `node --trace-deprecation ...` to show where the warning was created)
+(node:14821) [DEP_WEBPACK_DEV_SERVER_ON_AFTER_SETUP_MIDDLEWARE] DeprecationWarning: 'onAfterSetupMiddleware' option is deprecated. Please use the 'setupMiddlewares' option.
+(node:14821) [DEP_WEBPACK_DEV_SERVER_ON_BEFORE_SETUP_MIDDLEWARE] DeprecationWarning: 'onBeforeSetupMiddleware' option is deprecated. Please use the 'setupMiddlewares' option.
+Starting the development server...
+
+Compiled successfully!
+
+You can now view TheAlankriti-jewells-frontend in the browser.
+
+  Local:            http://localhost:3000
+  On Your Network:  http://192.168.18.242:3000
+
+Note that the development build is not optimized.
+To create a production build, use npm run build.
+
+webpack compiled successfully
+(node:14821) [DEP0060] DeprecationWarning: The `util._extend` API is deprecated. Please use Object.assign() instead.
+Compiling...
+Compiled successfully!
+webpack compiled successfully
+Compiling...
+Compiled successfully!
+webpack compiled successfully
+Compiling...
+Compiled successfully!
+webpack compiled successfully
+Compiling...
+Compiled successfully!
+webpack compiled successfully
+Compiling...
+Compiled successfully!
+webpack compiled successfully
+Compiling...
+Compiled successfully!
+webpack compiled successfully
+Compiling...
+Compiled successfully!
+webpack compiled successfully
+Compiling...
+Compiled successfully!
+webpack compiled successfully
+Compiling...
+Compiled successfully!
+webpack compiled successfully
+Compiling...
+Compiled successfully!
+webpack compiled successfully
+Compiling...
+Compiled successfully!
+webpack compiled successfully
+Compiling...
+Compiled successfully!
+webpack compiled successfully
+Compiling...
+Compiled successfully!
+webpack compiled successfully
+Compiling...
+Failed to compile.
+
+SyntaxError: /Users/aashisjha/Desktop/The Alankriti/frontend/src/pages/ProductDetail.js: 'return' outside of function. (204:4)
+  202 |
+  203 |   if (loading) {
+> 204 |     return (
+      |     ^
+  205 |       <div className="min-h-screen bg-gray-50 py-12">
+  206 |         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+  207 |           <div className="lg:grid lg:grid-cols-2 lg:gap-x-8 lg:items-start">
+    at parser.next (<anonymous>)
+    at normalizeFile.next (<anonymous>)
+    at run.next (<anonymous>)
+    at transform.next (<anonymous>)
+ERROR in ./src/pages/ProductDetail.js
+Module build failed (from ./node_modules/babel-loader/lib/index.js):
+SyntaxError: /Users/aashisjha/Desktop/The Alankriti/frontend/src/pages/ProductDetail.js: 'return' outside of function. (204:4)
+
+  202 |
+  203 |   if (loading) {
+> 204 |     return (
+      |     ^
+  205 |       <div className="min-h-screen bg-gray-50 py-12">
+  206 |         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+  207 |           <div className="lg:grid lg:grid-cols-2 lg:gap-x-8 lg:items-start">
+    at constructor (/Users/aashisjha/Desktop/The Alankriti/frontend/node_modules/@babel/parser/lib/index.js:367:19)
+    at FlowParserMixin.raise (/Users/aashisjha/Desktop/The Alankriti/frontend/node_modules/@babel/parser/lib/index.js:6630:19)
+    at FlowParserMixin.parseReturnStatement (/Users/aashisjha/Desktop/The Alankriti/frontend/node_modules/@babel/parser/lib/index.js:13141:12)
+    at FlowParserMixin.parseStatementContent (/Users/aashisjha/Desktop/The Alankriti/frontend/node_modules/@babel/parser/lib/index.js:12803:21)
+    at FlowParserMixin.parseStatementLike (/Users/aashisjha/Desktop/The Alankriti/frontend/node_modules/@babel/parser/lib/index.js:12772:17)
+    at FlowParserMixin.parseStatementLike (/Users/aashisjha/Desktop/The Alankriti/frontend/node_modules/@babel/parser/lib/index.js:2949:24)
+    at FlowParserMixin.parseStatementListItem (/Users/aashisjha/Desktop/The Alankriti/frontend/node_modules/@babel/parser/lib/index.js:12752:17)
+    at FlowParserMixin.parseBlockOrModuleBlockBody (/Users/aashisjha/Desktop/The Alankriti/frontend/node_modules/@babel/parser/lib/index.js:13321:61)
+    at FlowParserMixin.parseBlockBody (/Users/aashisjha/Desktop/The Alankriti/frontend/node_modules/@babel/parser/lib/index.js:13314:10)
+    at FlowParserMixin.parseBlock (/Users/aashisjha/Desktop/The Alankriti/frontend/node_modules/@babel/parser/lib/index.js:13302:10)
+    at FlowParserMixin.parseStatementContent (/Users/aashisjha/Desktop/The Alankriti/frontend/node_modules/@babel/parser/lib/index.js:12863:21)
+    at FlowParserMixin.parseStatementLike (/Users/aashisjha/Desktop/The Alankriti/frontend/node_modules/@babel/parser/lib/index.js:12772:17)
+    at FlowParserMixin.parseStatementLike (/Users/aashisjha/Desktop/The Alankriti/frontend/node_modules/@babel/parser/lib/index.js:2949:24)
+    at FlowParserMixin.parseStatementOrSloppyAnnexBFunctionDeclaration (/Users/aashisjha/Desktop/The Alankriti/frontend/node_modules/@babel/parser/lib/index.js:12762:17)
+    at FlowParserMixin.parseIfStatement (/Users/aashisjha/Desktop/The Alankriti/frontend/node_modules/@babel/parser/lib/index.js:13135:28)
+    at FlowParserMixin.parseStatementContent (/Users/aashisjha/Desktop/The Alankriti/frontend/node_modules/@babel/parser/lib/index.js:12801:21)
+    at FlowParserMixin.parseStatementLike (/Users/aashisjha/Desktop/The Alankriti/frontend/node_modules/@babel/parser/lib/index.js:12772:17)
+    at FlowParserMixin.parseStatementLike (/Users/aashisjha/Desktop/The Alankriti/frontend/node_modules/@babel/parser/lib/index.js:2949:24)
+    at FlowParserMixin.parseModuleItem (/Users/aashisjha/Desktop/The Alankriti/frontend/node_modules/@babel/parser/lib/index.js:12749:17)
+    at FlowParserMixin.parseBlockOrModuleBlockBody (/Users/aashisjha/Desktop/The Alankriti/frontend/node_modules/@babel/parser/lib/index.js:13321:36)
+    at FlowParserMixin.parseBlockBody (/Users/aashisjha/Desktop/The Alankriti/frontend/node_modules/@babel/parser/lib/index.js:13314:10)
+    at FlowParserMixin.parseProgram (/Users/aashisjha/Desktop/The Alankriti/frontend/node_modules/@babel/parser/lib/index.js:12630:10)
+    at FlowParserMixin.parseTopLevel (/Users/aashisjha/Desktop/The Alankriti/frontend/node_modules/@babel/parser/lib/index.js:12620:25)
+    at FlowParserMixin.parseTopLevel (/Users/aashisjha/Desktop/The Alankriti/frontend/node_modules/@babel/parser/lib/index.js:3718:28)
+    at FlowParserMixin.parse (/Users/aashisjha/Desktop/The Alankriti/frontend/node_modules/@babel/parser/lib/index.js:14497:10)
+    at parse (/Users/aashisjha/Desktop/The Alankriti/frontend/node_modules/@babel/parser/lib/index.js:14531:38)
+    at parser (/Users/aashisjha/Desktop/The Alankriti/frontend/node_modules/@babel/core/lib/parser/index.js:41:34)
+    at parser.next (<anonymous>)
+    at normalizeFile (/Users/aashisjha/Desktop/The Alankriti/frontend/node_modules/@babel/core/lib/transformation/normalize-file.js:64:37)
+    at normalizeFile.next (<anonymous>)
+    at run (/Users/aashisjha/Desktop/The Alankriti/frontend/node_modules/@babel/core/lib/transformation/index.js:22:50)
+    at run.next (<anonymous>)
+    at transform (/Users/aashisjha/Desktop/The Alankriti/frontend/node_modules/@babel/core/lib/transform.js:22:33)
+    at transform.next (<anonymous>)
+    at step (/Users/aashisjha/Desktop/The Alankriti/frontend/node_modules/gensync/index.js:261:32)
+    at /Users/aashisjha/Desktop/The Alankriti/frontend/node_modules/gensync/index.js:273:13
+    at async.call.result.err.err (/Users/aashisjha/Desktop/The Alankriti/frontend/node_modules/gensync/index.js:223:11)
+
+webpack compiled with 1 error
