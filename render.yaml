@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: thealankriti-backend
+    runtime: node
+    rootDir: backend
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: MONGODB_URI
+        value: mongodb+srv://thealankriti_db_user:ZwHIC6cxgHdKzy50@thealankriti.b27onwb.mongodb.net/?retryWrites=true&w=majority&appName=thealankriti
+      - key: JWT_SECRET
+        value: The Alankriti-jewells-super-secret-key-2024
+      - key: PORT
+        value: 10000
