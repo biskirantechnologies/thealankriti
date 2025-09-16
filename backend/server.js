@@ -38,17 +38,34 @@ app.use(compression());
 // app.use('/api/', limiter);
 
 // CORS configuration
-app.use(cors({
-  origin: process.env.NODE_ENV === 'production' 
-    ? [
-        'https://thealankriti-frontend.onrender.com',
-        'https://www.thealankriti.com',
-        'https://thealankriti.com',
-        'https://thealankriti.onrender.com'
-      ] 
-    : ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:3002', 'http://localhost:3003', 'http://localhost:3004'],
-  credentials: true
-}));
+const corsOptions = {
+  origin: function (origin, callback) {
+    const allowedOrigins = process.env.NODE_ENV === 'production' 
+      ? [
+          'https://thealankriti-frontend.onrender.com',
+          'https://www.thealankriti.com',
+          'https://thealankriti.com',
+          'https://thealankriti.onrender.com'
+        ] 
+      : ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:3002', 'http://localhost:3003', 'http://localhost:3004'];
+    
+    // Allow requests with no origin (mobile apps, curl, etc.)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      console.log(`🚫 CORS blocked origin: ${origin}`);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  optionsSuccessStatus: 200 // Some legacy browsers choke on 204
+};
+
+app.use(cors(corsOptions));
 
 // Logging
 app.use(morgan('combined'));
@@ -69,6 +86,17 @@ app.get('/health', (req, res) => {
     status: 'OK', 
     timestamp: new Date().toISOString(),
     service: 'Ukriti Jewells API'
+  });
+});
+
+// Debug route for network connectivity
+app.get('/api/debug', (req, res) => {
+  res.status(200).json({
+    status: 'API Working',
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development',
+    origin: req.headers.origin || 'No origin',
+    userAgent: req.headers['user-agent'] || 'No user agent'
   });
 });
 

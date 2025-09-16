@@ -31,6 +31,19 @@ api.interceptors.response.use(
   (error) => {
     const { response } = error;
     
+    // Network error (no response)
+    if (!response) {
+      console.error('Network Error:', error.message);
+      if (error.code === 'ECONNABORTED') {
+        toast.error('Request timeout. Please check your connection.');
+      } else if (error.message.includes('Network Error')) {
+        toast.error('Unable to connect to server. Please check your internet connection.');
+      } else {
+        toast.error('Network error. Please try again.');
+      }
+      return Promise.reject(error);
+    }
+    
     if (response?.status === 401) {
       // Unauthorized - clear token and redirect to login
       Cookies.remove('token');
