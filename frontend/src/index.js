@@ -2,7 +2,6 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { HashRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from 'react-query';
-import { ReactQueryDevtools } from 'react-query/devtools';
 import { HelmetProvider } from 'react-helmet-async';
 import { Toaster } from 'react-hot-toast';
 
@@ -59,7 +58,7 @@ root.render(
           </AuthProvider>
         </HashRouter>
       </HelmetProvider>
-      {process.env.NODE_ENV === 'development' && <ReactQueryDevtools />}
+
     </QueryClientProvider>
   </React.StrictMode>
 );

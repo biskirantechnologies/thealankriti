@@ -40,8 +40,13 @@ app.use(compression());
 // CORS configuration
 app.use(cors({
   origin: process.env.NODE_ENV === 'production' 
-    ? ['https://your-domain.com'] 
-    : ['http://localhost:3000', 'http://localhost:3001'],
+    ? [
+        'https://thealankriti-frontend.onrender.com',
+        'https://www.thealankriti.com',
+        'https://thealankriti.com',
+        'https://thealankriti.onrender.com'
+      ] 
+    : ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:3002'],
   credentials: true
 }));
 
