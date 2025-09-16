@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Upload & Display Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 20px; border: 1px solid #ddd; border-radius: 8px; }
+        .result { margin: 10px 0; padding: 10px; border-radius: 4px; }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        img { max-width: 200px; margin: 10px; border: 1px solid #ddd; }
+        button { padding: 10px 20px; margin: 5px; cursor: pointer; }
+        #uploadForm { margin: 20px 0; }
+    </style>
+</head>
+<body>
+    <h1>Ukriti Jewells - Image Upload & Display Test</h1>
+
+    <div class="test-section">
+        <h2>1. Test Existing Product Images</h2>
+        <button onclick="testExistingImages()">Test Image Display</button>
+        <div id="existingImagesResult"></div>
+        <div id="existingImagesDisplay"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>2. Test Admin Login</h2>
+        <button onclick="testAdminLogin()">Login as Admin</button>
+        <div id="loginResult"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>3. Test Image Upload (4MB Limit)</h2>
+        <form id="uploadForm">
+            <input type="file" id="imageFile" accept="image/*" required>
+            <button type="submit">Upload Image</button>
+        </form>
+        <div id="uploadResult"></div>
+        <div id="uploadedImageDisplay"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>4. Test File Size Limit (>4MB)</h2>
+        <p>Upload a file larger than 4MB to test the size limit:</p>
+        <form id="largeSizeTestForm">
+            <input type="file" id="largeImageFile" accept="image/*" required>
+            <button type="submit">Test Large File Upload</button>
+        </form>
+        <div id="largeSizeResult"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>5. Test Product Database</h2>
+        <button onclick="testProductDatabase()">Check Products with Images</button>
+        <div id="productDatabaseResult"></div>
+    </div>
+
+    <script>
+        let adminToken = null;
+        const API_BASE = 'http://localhost:3001/api';
+
+        // Test existing product images
+        async function testExistingImages() {
+            const resultDiv = document.getElementById('existingImagesResult');
+            const displayDiv = document.getElementById('existingImagesDisplay');
+            
+            const testImages = [
+                '/uploads/products/product-1756759606361-718657128.webp',
+                '/uploads/products/product-1756484332742-131039068.png',
+                '/uploads/products/product-1756487605339-29195034.png'
+            ];
+
+            resultDiv.innerHTML = '<div class="info">Testing existing images...</div>';
+            displayDiv.innerHTML = '';
+
+            for (const imagePath of testImages) {
+                try {
+                    const response = await fetch(`http://localhost:3001${imagePath}`);
+                    if (response.ok) {
+                        resultDiv.innerHTML += `<div class="success">✓ Image accessible: ${imagePath}</div>`;
+                        const img = document.createElement('img');
+                        img.src = `http://localhost:3001${imagePath}`;
+                        img.alt = 'Test Image';
+                        displayDiv.appendChild(img);
+                    } else {
+                        resultDiv.innerHTML += `<div class="error">✗ Image not accessible: ${imagePath} (Status: ${response.status})</div>`;
+                    }
+                } catch (error) {
+                    resultDiv.innerHTML += `<div class="error">✗ Error loading ${imagePath}: ${error.message}</div>`;
+                }
+            }
+        }
+
+        // Test admin login
+        async function testAdminLogin() {
+            const resultDiv = document.getElementById('loginResult');
+            resultDiv.innerHTML = '<div class="info">Testing admin login...</div>';
+
+            try {
+                const response = await fetch(`${API_BASE}/auth/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        email: 'admin@example.com',
+                        password: 'admin123'
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok && data.token) {
+                    adminToken = data.token;
+                    resultDiv.innerHTML = `<div class="success">✓ Admin login successful! Token: ${data.token.substring(0, 20)}...</div>`;
+                } else {
+                    resultDiv.innerHTML = `<div class="error">✗ Login failed: ${data.message}</div>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">✗ Login error: ${error.message}</div>`;
+            }
+        }
+
+        // Test image upload
+        document.getElementById('uploadForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            if (!adminToken) {
+                document.getElementById('uploadResult').innerHTML = '<div class="error">Please login first!</div>';
+                return;
+            }
+
+            const fileInput = document.getElementById('imageFile');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                document.getElementById('uploadResult').innerHTML = '<div class="error">Please select a file!</div>';
+                return;
+            }
+
+            // Check file size (4MB = 4 * 1024 * 1024 bytes)
+            const maxSize = 4 * 1024 * 1024;
+            if (file.size > maxSize) {
+                document.getElementById('uploadResult').innerHTML = 
+                    `<div class="error">File too large! Size: ${(file.size / 1024 / 1024).toFixed(2)}MB (Max: 4MB)</div>`;
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('image', file);
+
+            try {
+                document.getElementById('uploadResult').innerHTML = '<div class="info">Uploading image...</div>';
+                
+                const response = await fetch(`${API_BASE}/admin/upload-image`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${adminToken}`
+                    },
+                    body: formData
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    document.getElementById('uploadResult').innerHTML = 
+                        `<div class="success">✓ Upload successful! Image URL: ${data.imageUrl}</div>`;
+                    
+                    // Display the uploaded image
+                    const img = document.createElement('img');
+                    img.src = `http://localhost:3001${data.imageUrl}`;
+                    img.alt = 'Uploaded Image';
+                    document.getElementById('uploadedImageDisplay').innerHTML = '';
+                    document.getElementById('uploadedImageDisplay').appendChild(img);
+                } else {
+                    document.getElementById('uploadResult').innerHTML = 
+                        `<div class="error">✗ Upload failed: ${data.message}</div>`;
+                }
+            } catch (error) {
+                document.getElementById('uploadResult').innerHTML = 
+                    `<div class="error">✗ Upload error: ${error.message}</div>`;
+            }
+        });
+
+        // Test large file upload
+        document.getElementById('largeSizeTestForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            if (!adminToken) {
+                document.getElementById('largeSizeResult').innerHTML = '<div class="error">Please login first!</div>';
+                return;
+            }
+
+            const fileInput = document.getElementById('largeImageFile');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                document.getElementById('largeSizeResult').innerHTML = '<div class="error">Please select a file!</div>';
+                return;
+            }
+
+            const fileSizeMB = (file.size / 1024 / 1024).toFixed(2);
+            document.getElementById('largeSizeResult').innerHTML = 
+                `<div class="info">Testing file: ${file.name} (${fileSizeMB}MB)</div>`;
+
+            const formData = new FormData();
+            formData.append('image', file);
+
+            try {
+                const response = await fetch(`${API_BASE}/admin/upload-image`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${adminToken}`
+                    },
+                    body: formData
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    document.getElementById('largeSizeResult').innerHTML += 
+                        `<div class="error">✗ Large file was accepted (should have been rejected!)</div>`;
+                } else if (response.status === 400 && data.message.includes('4MB')) {
+                    document.getElementById('largeSizeResult').innerHTML += 
+                        `<div class="success">✓ Large file correctly rejected: ${data.message}</div>`;
+                } else {
+                    document.getElementById('largeSizeResult').innerHTML += 
+                        `<div class="error">✗ Unexpected response: ${data.message}</div>`;
+                }
+            } catch (error) {
+                document.getElementById('largeSizeResult').innerHTML += 
+                    `<div class="error">✗ Upload error: ${error.message}</div>`;
+            }
+        });
+
+        // Test product database
+        async function testProductDatabase() {
+            const resultDiv = document.getElementById('productDatabaseResult');
+            
+            if (!adminToken) {
+                resultDiv.innerHTML = '<div class="error">Please login first!</div>';
+                return;
+            }
+
+            try {
+                resultDiv.innerHTML = '<div class="info">Checking products with images...</div>';
+                
+                const response = await fetch(`${API_BASE}/admin/products`, {
+                    headers: {
+                        'Authorization': `Bearer ${adminToken}`
+                    }
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    const products = data.products || data;
+                    const productsWithImages = products.filter(p => p.images && p.images.length > 0);
+                    const productsWithoutImages = products.filter(p => !p.images || p.images.length === 0);
+                    
+                    resultDiv.innerHTML = `
+                        <div class="success">✓ Total products: ${products.length}</div>
+                        <div class="success">✓ Products with images: ${productsWithImages.length}</div>
+                        <div class="info">Products without images: ${productsWithoutImages.length}</div>
+                    `;
+
+                    if (productsWithImages.length > 0) {
+                        resultDiv.innerHTML += '<div class="info"><strong>Sample product with images:</strong></div>';
+                        const sample = productsWithImages[0];
+                        resultDiv.innerHTML += `
+                            <div class="info">
+                                Product: ${sample.name}<br>
+                                Images: ${sample.images.length}<br>
+                                First image: ${sample.images[0].url}
+                            </div>
+                        `;
+                    }
+                } else {
+                    resultDiv.innerHTML = `<div class="error">✗ Failed to fetch products: ${data.message}</div>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">✗ Database test error: ${error.message}</div>`;
+            }
+        }
+
+        // Auto-start some tests
+        window.onload = function() {
+            testExistingImages();
+        };
+    </script>
+</body>
+</html>

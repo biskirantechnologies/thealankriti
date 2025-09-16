@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ukriti Jewells - Test Page</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        .container {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            text-align: center;
+            max-width: 600px;
+        }
+        h1 {
+            color: #d4af37;
+            font-size: 2.5em;
+            margin-bottom: 20px;
+        }
+        p {
+            color: #666;
+            line-height: 1.6;
+            margin-bottom: 30px;
+        }
+        .btn {
+            background: #d4af37;
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 25px;
+            text-decoration: none;
+            display: inline-block;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+        .btn:hover {
+            background: #b8941f;
+            transform: translateY(-2px);
+        }
+        .status {
+            background: #e8f5e8;
+            border: 1px solid #4caf50;
+            color: #2e7d32;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #d4af37;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔶 Ukriti Jewells</h1>
+        <div class="status">
+            <strong>✅ GitHub Pages is Working!</strong>
+        </div>
+        
+        <p>Your website is successfully deployed to GitHub Pages. We're now loading the full React application...</p>
+        
+        <div style="margin: 30px 0;">
+            <div class="loading"></div>
+            <span>Loading React Application...</span>
+        </div>
+        
+        <p><strong>What's Working:</strong></p>
+        <ul style="text-align: left; max-width: 400px; margin: 0 auto;">
+            <li>✅ GitHub Pages deployment</li>
+            <li>✅ Static file serving</li>
+            <li>✅ Domain configuration</li>
+            <li>🔄 Loading React components...</li>
+        </ul>
+        
+        <div style="margin-top: 30px;">
+            <a href="https://eraashisjha.github.io/Ukriti-Jewells/#/" class="btn">Go to Full Website</a>
+        </div>
+        
+        <p style="margin-top: 30px; font-size: 0.9em; color: #999;">
+            If you're seeing this page, GitHub Pages is working correctly.<br>
+            The React app will load automatically in a few seconds.
+        </p>
+    </div>
+
+    <script>
+        // Auto-redirect to hash route after 3 seconds
+        setTimeout(function() {
+            if (window.location.hash === '') {
+                window.location.href = 'https://eraashisjha.github.io/Ukriti-Jewells/#/';
+            }
+        }, 3000);
+    </script>
+</body>
+</html>

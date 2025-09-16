@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Product Delete Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .test-section { margin-bottom: 30px; padding: 20px; border: 1px solid #ddd; border-radius: 8px; }
+        .product { display: flex; justify-content: space-between; align-items: center; padding: 10px; border: 1px solid #ccc; margin: 5px 0; }
+        .btn { padding: 8px 16px; margin: 5px; cursor: pointer; border: none; border-radius: 4px; }
+        .btn-delete { background-color: #ff4444; color: white; }
+        .btn-primary { background-color: #007bff; color: white; }
+        .status { padding: 4px 8px; border-radius: 4px; color: white; font-size: 12px; }
+        .success { background-color: #4CAF50; }
+        .error { background-color: #f44336; }
+        .info { background-color: #2196F3; }
+    </style>
+</head>
+<body>
+    <h1>🗑️ Product Delete Test - Database Verification</h1>
+    
+    <div class="test-section">
+        <h2>Authentication</h2>
+        <button class="btn btn-primary" onclick="loginAdmin()">🔐 Login as Admin</button>
+        <div id="auth-status"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Products List</h2>
+        <button class="btn btn-primary" onclick="fetchProducts()">🔄 Fetch Products</button>
+        <div id="products-list"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Delete Test Results</h2>
+        <div id="delete-results"></div>
+    </div>
+
+    <script>
+        let authToken = '';
+        let products = [];
+
+        async function loginAdmin() {
+            const statusDiv = document.getElementById('auth-status');
+            statusDiv.innerHTML = '<div class="status info">Logging in...</div>';
+            
+            try {
+                const response = await fetch('http://localhost:3001/api/auth/admin-login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        email: 'bewithu.aj@gmail.com',
+                        password: 'admin123'
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    authToken = data.token;
+                    statusDiv.innerHTML = '<div class="status success">✅ Login successful!</div>';
+                    fetchProducts();
+                } else {
+                    statusDiv.innerHTML = `<div class="status error">❌ Login failed: ${data.message}</div>`;
+                }
+            } catch (error) {
+                statusDiv.innerHTML = `<div class="status error">❌ Login error: ${error.message}</div>`;
+            }
+        }
+
+        async function fetchProducts() {
+            const listDiv = document.getElementById('products-list');
+            
+            if (!authToken) {
+                listDiv.innerHTML = '<div class="status error">❌ Please login first!</div>';
+                return;
+            }
+
+            listDiv.innerHTML = '<div class="status info">Loading products...</div>';
+            
+            try {
+                const response = await fetch('http://localhost:3001/api/admin/products?limit=10', {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+
+                const data = await response.json();
+                
+                if (response.ok && data.products) {
+                    products = data.products;
+                    displayProducts();
+                } else {
+                    listDiv.innerHTML = '<div class="status error">❌ Failed to fetch products</div>';
+                }
+            } catch (error) {
+                listDiv.innerHTML = `<div class="status error">❌ Error: ${error.message}</div>`;
+            }
+        }
+
+        function displayProducts() {
+            const listDiv = document.getElementById('products-list');
+            
+            if (products.length === 0) {
+                listDiv.innerHTML = '<div class="status info">ℹ️ No products found</div>';
+                return;
+            }
+
+            let html = `<h3>Products (${products.length} found):</h3>`;
+            products.forEach(product => {
+                html += `
+                    <div class="product">
+                        <div>
+                            <strong>${product.name}</strong><br>
+                            <small>ID: ${product._id}</small><br>
+                            <small>Active: ${product.isActive ? 'Yes' : 'No'}</small>
+                        </div>
+                        <button class="btn btn-delete" onclick="deleteProduct('${product._id}', '${product.name}')">
+                            🗑️ Delete
+                        </button>
+                    </div>
+                `;
+            });
+            
+            listDiv.innerHTML = html;
+        }
+
+        async function deleteProduct(productId, productName) {
+            const resultsDiv = document.getElementById('delete-results');
+            
+            if (!confirm(`Are you sure you want to PERMANENTLY DELETE "${productName}" from the database?`)) {
+                return;
+            }
+
+            resultsDiv.innerHTML += `<div class="status info">🗑️ Deleting "${productName}"...</div>`;
+            
+            try {
+                const response = await fetch(`http://localhost:3001/api/admin/products/${productId}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    resultsDiv.innerHTML += `<div class="status success">✅ "${productName}" deleted: ${data.message}</div>`;
+                    
+                    // Verify deletion by checking if product still exists
+                    setTimeout(async () => {
+                        try {
+                            const checkResponse = await fetch(`http://localhost:3001/api/products?limit=100`);
+                            const checkData = await checkResponse.json();
+                            
+                            const stillExists = checkData.products.find(p => p._id === productId);
+                            
+                            if (stillExists) {
+                                resultsDiv.innerHTML += `<div class="status error">⚠️ WARNING: Product "${productName}" still exists in database!</div>`;
+                            } else {
+                                resultsDiv.innerHTML += `<div class="status success">✅ VERIFIED: Product "${productName}" completely removed from database</div>`;
+                            }
+                            
+                            // Refresh products list
+                            fetchProducts();
+                        } catch (error) {
+                            resultsDiv.innerHTML += `<div class="status error">❌ Verification error: ${error.message}</div>`;
+                        }
+                    }, 1000);
+                    
+                } else {
+                    resultsDiv.innerHTML += `<div class="status error">❌ Delete failed: ${data.message}</div>`;
+                }
+            } catch (error) {
+                resultsDiv.innerHTML += `<div class="status error">❌ Delete error: ${error.message}</div>`;
+            }
+        }
+
+        // Auto-login on page load
+        window.onload = () => {
+            loginAdmin();
+        };
+    </script>
+</body>
+</html>

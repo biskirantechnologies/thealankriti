@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Product Pagination Tester</title>
+    <script src="https://cdn.jsdelivr.net/npm/js-cookie@3.0.1/dist/js.cookie.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; background: #f5f5f5; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .log { background: #f8f9fa; padding: 10px; margin: 10px 0; border-left: 4px solid #007bff; font-family: monospace; white-space: pre-wrap; }
+        .error { border-left-color: #dc3545; background: #fff5f5; }
+        .success { border-left-color: #28a745; background: #f8fff8; }
+        button { background: #007bff; color: white; border: none; padding: 10px 20px; margin: 5px; border-radius: 4px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        button:disabled { background: #6c757d; cursor: not-allowed; }
+        input, select { padding: 8px; margin: 5px; border: 1px solid #ddd; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🛠️ Product Pagination Tester</h1>
+        <p>Test and add products to verify pagination functionality</p>
+        
+        <div>
+            <button onclick="testLogin()">1. Login</button>
+            <button onclick="checkProducts()">2. Check Products</button>
+            <button onclick="addBulkProducts()">3. Add 20 Test Products</button>
+            <button onclick="testPagination()">4. Test Pagination</button>
+            <button onclick="clearLogs()">Clear Logs</button>
+        </div>
+
+        <div style="margin: 20px 0;">
+            <h3>Add Custom Product</h3>
+            <input type="text" id="productName" placeholder="Product Name" value="Test Product">
+            <select id="productCategory">
+                <option value="rings">Rings</option>
+                <option value="necklaces">Necklaces</option>
+                <option value="earrings">Earrings</option>
+                <option value="bracelets">Bracelets</option>
+            </select>
+            <input type="number" id="productPrice" placeholder="Price" value="1500">
+            <button onclick="addSingleProduct()">Add Product</button>
+        </div>
+        
+        <div id="logs"></div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:3001/api';
+        let authToken = Cookies.get('token');
+        
+        function log(message, type = 'info') {
+            const logsDiv = document.getElementById('logs');
+            const logDiv = document.createElement('div');
+            logDiv.className = `log ${type}`;
+            logDiv.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logsDiv.appendChild(logDiv);
+            logsDiv.scrollTop = logsDiv.scrollHeight;
+            console.log(message);
+        }
+        
+        function clearLogs() {
+            document.getElementById('logs').innerHTML = '';
+        }
+        
+        async function testLogin() {
+            try {
+                log('🔑 Testing admin login...', 'info');
+                
+                const response = await fetch(`${API_BASE}/auth/admin-login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        email: 'admin@test.com',
+                        password: 'admin123'
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    authToken = data.token;
+                    Cookies.set('token', authToken);
+                    log(`✅ Login successful!`, 'success');
+                } else {
+                    log(`❌ Login failed: ${data.message}`, 'error');
+                }
+            } catch (error) {
+                log(`❌ Login error: ${error.message}`, 'error');
+            }
+        }
+        
+        async function checkProducts() {
+            if (!authToken) {
+                log('❌ Please login first!', 'error');
+                return;
+            }
+            
+            try {
+                log('📋 Checking products...', 'info');
+                
+                const response = await fetch(`${API_BASE}/admin/products?limit=10&page=1`, {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    log(`✅ Total Products: ${data.pagination.totalProducts}`, 'success');
+                    log(`📊 Total Pages: ${data.pagination.totalPages}`, 'info');
+                    log(`📋 Current Page Products: ${data.products.length}`, 'info');
+                } else {
+                    log(`❌ Failed to fetch products: ${data.message}`, 'error');
+                }
+            } catch (error) {
+                log(`❌ Error: ${error.message}`, 'error');
+            }
+        }
+        
+        async function addSingleProduct() {
+            if (!authToken) {
+                log('❌ Please login first!', 'error');
+                return;
+            }
+            
+            const name = document.getElementById('productName').value;
+            const category = document.getElementById('productCategory').value;
+            const price = document.getElementById('productPrice').value;
+            
+            try {
+                log(`➕ Adding product: ${name}...`, 'info');
+                
+                const productData = {
+                    name: name,
+                    description: `A beautiful ${category.slice(0, -1)} from our collection`,
+                    category: category,
+                    price: parseInt(price),
+                    originalPrice: parseInt(price) + 100,
+                    sku: `PROD_${Date.now()}`,
+                    stockQuantity: Math.floor(Math.random() * 100) + 10,
+                    material: 'Gold',
+                    purity: '18K',
+                    tags: [category, 'jewelry', 'handmade'],
+                    featured: Math.random() > 0.7,
+                    isActive: true
+                };
+                
+                const response = await fetch(`${API_BASE}/admin/products`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(productData)
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    log(`✅ Product "${name}" added successfully!`, 'success');
+                } else {
+                    log(`❌ Failed to add product: ${data.message}`, 'error');
+                }
+            } catch (error) {
+                log(`❌ Error adding product: ${error.message}`, 'error');
+            }
+        }
+        
+        async function addBulkProducts() {
+            if (!authToken) {
+                log('❌ Please login first!', 'error');
+                return;
+            }
+            
+            log('🚀 Adding 20 test products...', 'info');
+            
+            const categories = ['rings', 'necklaces', 'earrings', 'bracelets', 'pendants'];
+            const materials = ['Gold', 'Silver', 'Platinum', 'Rose Gold'];
+            const purities = ['18K', '22K', '14K', '925 Sterling'];
+            
+            for (let i = 1; i <= 20; i++) {
+                const category = categories[Math.floor(Math.random() * categories.length)];
+                const material = materials[Math.floor(Math.random() * materials.length)];
+                const purity = purities[Math.floor(Math.random() * purities.length)];
+                const price = Math.floor(Math.random() * 5000) + 500;
+                
+                const productData = {
+                    name: `${material} ${category.charAt(0).toUpperCase() + category.slice(1, -1)} Design ${i}`,
+                    description: `Elegant ${material} ${category.slice(0, -1)} with intricate design work. Perfect for special occasions.`,
+                    shortDescription: `Beautiful ${material} ${category.slice(0, -1)}`,
+                    category: category,
+                    price: price,
+                    originalPrice: price + Math.floor(Math.random() * 500) + 100,
+                    sku: `BULK_${Date.now()}_${i}`,
+                    stockQuantity: Math.floor(Math.random() * 50) + 5,
+                    material: material,
+                    purity: purity,
+                    tags: [category, material.toLowerCase(), 'jewelry', 'handcrafted'],
+                    featured: Math.random() > 0.8,
+                    trending: Math.random() > 0.9,
+                    isActive: true
+                };
+                
+                try {
+                    const response = await fetch(`${API_BASE}/admin/products`, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${authToken}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(productData)
+                    });
+                    
+                    if (response.ok) {
+                        log(`✅ Added: ${productData.name}`, 'success');
+                    } else {
+                        const data = await response.json();
+                        log(`❌ Failed to add product ${i}: ${data.message}`, 'error');
+                    }
+                } catch (error) {
+                    log(`❌ Error adding product ${i}: ${error.message}`, 'error');
+                }
+                
+                // Small delay to avoid overwhelming the server
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+            
+            log('🎉 Bulk product addition completed!', 'success');
+        }
+        
+        async function testPagination() {
+            if (!authToken) {
+                log('❌ Please login first!', 'error');
+                return;
+            }
+            
+            try {
+                log('🧪 Testing pagination...', 'info');
+                
+                // Test different page sizes
+                const pageSizes = [6, 12, 24];
+                
+                for (const pageSize of pageSizes) {
+                    log(`📊 Testing with ${pageSize} products per page:`, 'info');
+                    
+                    const response = await fetch(`${API_BASE}/admin/products?limit=${pageSize}&page=1`, {
+                        headers: {
+                            'Authorization': `Bearer ${authToken}`,
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (response.ok) {
+                        log(`  ✅ Page 1: ${data.products.length} products`, 'success');
+                        log(`  📈 Total Pages: ${data.pagination.totalPages}`, 'info');
+                        
+                        // Test page 2 if it exists
+                        if (data.pagination.totalPages > 1) {
+                            const page2Response = await fetch(`${API_BASE}/admin/products?limit=${pageSize}&page=2`, {
+                                headers: {
+                                    'Authorization': `Bearer ${authToken}`,
+                                    'Content-Type': 'application/json'
+                                }
+                            });
+                            
+                            const page2Data = await page2Response.json();
+                            if (page2Response.ok) {
+                                log(`  ✅ Page 2: ${page2Data.products.length} products`, 'success');
+                            }
+                        }
+                    } else {
+                        log(`  ❌ Failed: ${data.message}`, 'error');
+                    }
+                }
+            } catch (error) {
+                log(`❌ Pagination test error: ${error.message}`, 'error');
+            }
+        }
+        
+        // Initialize
+        if (authToken) {
+            log(`🔑 Found existing token`, 'info');
+        } else {
+            log('🔑 No auth token found. Please login first.', 'info');
+        }
+    </script>
+</body>
+</html>

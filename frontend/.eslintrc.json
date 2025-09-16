@@ -1,0 +1,7 @@
+{
+  "extends": ["react-app"],
+  "rules": {
+    "prettier/prettier": "off",
+    "no-unused-vars": "warn"
+  }
+}

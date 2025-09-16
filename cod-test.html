@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>COD Feature Test - Ukriti Jewells</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+        }
+        .success { border-color: #4CAF50; background-color: #f8fff8; }
+        .warning { border-color: #ff9800; background-color: #fff8f0; }
+        .info { border-color: #2196F3; background-color: #f0f8ff; }
+        .cod-badge {
+            background-color: #ff9800;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background-color: #45a049; }
+        .test-result {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .pass { background-color: #d4edda; color: #155724; }
+        .fail { background-color: #f8d7da; color: #721c24; }
+        pre {
+            background-color: #f4f4f4;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>💰 Cash on Delivery (COD) Feature Test</h1>
+        <p>Testing the newly implemented COD functionality for Ukriti Jewells</p>
+
+        <div class="test-section info">
+            <h3>🎯 Test Overview</h3>
+            <p>This page tests the Cash on Delivery (COD) features:</p>
+            <ul>
+                <li><span class="cod-badge">COD</span> Payment method availability</li>
+                <li>💰 COD fee calculation (NPR 50)</li>
+                <li>📋 Minimum order validation (NPR 1,000)</li>
+                <li>🚀 Order processing with COD</li>
+                <li>📊 Admin panel COD display</li>
+            </ul>
+        </div>
+
+        <div class="test-section">
+            <h3>🔍 Test 1: Payment Methods API</h3>
+            <p>Testing if COD is available in payment methods</p>
+            <button onclick="testPaymentMethods()">Test Payment Methods</button>
+            <div id="payment-methods-result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>🛒 Test 2: COD Order Simulation</h3>
+            <p>Simulating a COD order with the new features</p>
+            <button onclick="simulateCODOrder()">Simulate COD Order</button>
+            <div id="cod-order-result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>📊 Test 3: COD Pricing Calculation</h3>
+            <p>Testing COD fee calculation and minimum order validation</p>
+            <div>
+                <label>Order Amount (NPR): </label>
+                <input type="number" id="order-amount" value="1500" min="0">
+                <button onclick="testCODPricing()">Calculate COD Total</button>
+            </div>
+            <div id="pricing-result"></div>
+        </div>
+
+        <div class="test-section success">
+            <h3>✅ COD Features Implemented</h3>
+            <ul>
+                <li>✅ <strong>Frontend:</strong> COD option in checkout with orange styling</li>
+                <li>✅ <strong>Backend:</strong> COD payment method in Order model</li>
+                <li>✅ <strong>Validation:</strong> Minimum NPR 1,000 order amount</li>
+                <li>✅ <strong>Fees:</strong> NPR 50 COD handling fee</li>
+                <li>✅ <strong>Terms:</strong> COD terms and conditions acceptance</li>
+                <li>✅ <strong>Admin:</strong> Enhanced order management with COD display</li>
+                <li>✅ <strong>Tracking:</strong> COD-specific order confirmation and tracking</li>
+            </ul>
+        </div>
+
+        <div class="test-section warning">
+            <h3>⚠️ COD Restrictions</h3>
+            <ul>
+                <li>🏢 <strong>Delivery Area:</strong> Kathmandu Valley only</li>
+                <li>💰 <strong>Minimum Order:</strong> NPR 1,000</li>
+                <li>💸 <strong>Handling Fee:</strong> NPR 50 (non-refundable)</li>
+                <li>⏱️ <strong>Delivery Time:</strong> 3-5 business days</li>
+                <li>📞 <strong>Contact Required:</strong> Valid phone number mandatory</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:3001/api';
+
+        async function testPaymentMethods() {
+            const resultDiv = document.getElementById('payment-methods-result');
+            resultDiv.innerHTML = '<p>🔄 Testing payment methods...</p>';
+
+            try {
+                const response = await fetch(`${API_BASE}/payment/methods`);
+                const data = await response.json();
+                
+                const codMethod = data.methods.find(method => method.id === 'cod');
+                
+                if (codMethod && codMethod.enabled) {
+                    resultDiv.innerHTML = `
+                        <div class="test-result pass">
+                            ✅ PASS: COD method found and enabled
+                        </div>
+                        <pre>${JSON.stringify(codMethod, null, 2)}</pre>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="test-result fail">
+                            ❌ FAIL: COD method not found or disabled
+                        </div>
+                        <pre>${JSON.stringify(data.methods, null, 2)}</pre>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="test-result fail">
+                        ❌ ERROR: ${error.message}
+                    </div>
+                `;
+            }
+        }
+
+        async function simulateCODOrder() {
+            const resultDiv = document.getElementById('cod-order-result');
+            resultDiv.innerHTML = '<p>🔄 Simulating COD order...</p>';
+
+            const mockOrder = {
+                items: [
+                    {
+                        productSnapshot: {
+                            name: "Gold Ring Test",
+                            sku: "GR-TEST-001",
+                            price: 1500,
+                            image: "test-image.jpg"
+                        },
+                        quantity: 1,
+                        price: 1500
+                    }
+                ],
+                customerInfo: {
+                    firstName: "Test",
+                    lastName: "Customer",
+                    email: "test@test.com",
+                    phone: "9876543210"
+                },
+                shippingAddress: {
+                    firstName: "Test",
+                    lastName: "Customer",
+                    email: "test@test.com",
+                    phone: "9876543210",
+                    street: "Test Street",
+                    city: "Kathmandu",
+                    state: "Bagmati",
+                    zipCode: "44600",
+                    country: "Nepal"
+                },
+                payment: {
+                    method: "cod",
+                    status: "pending"
+                },
+                pricing: {
+                    subtotal: 1500,
+                    shippingCost: 500,
+                    codFee: 50,
+                    tax: 45,
+                    discount: 0,
+                    total: 2095
+                }
+            };
+
+            resultDiv.innerHTML = `
+                <div class="test-result pass">
+                    ✅ COD Order Simulation Ready
+                </div>
+                <h4>Mock COD Order Details:</h4>
+                <pre>${JSON.stringify(mockOrder, null, 2)}</pre>
+                <p><strong>Note:</strong> This is a simulation. Actual order creation requires authentication.</p>
+            `;
+        }
+
+        function testCODPricing() {
+            const resultDiv = document.getElementById('pricing-result');
+            const orderAmount = parseFloat(document.getElementById('order-amount').value) || 0;
+
+            const subtotal = orderAmount;
+            const shippingCost = subtotal > 25000 ? 0 : 500;
+            const codFee = 50; // COD handling fee
+            const tax = subtotal * 0.03; // 3% GST
+            const total = subtotal + shippingCost + codFee + tax;
+
+            const isValidOrder = subtotal >= 1000;
+
+            resultDiv.innerHTML = `
+                <div class="test-result ${isValidOrder ? 'pass' : 'fail'}">
+                    ${isValidOrder ? '✅' : '❌'} ${isValidOrder ? 'Valid COD Order' : 'Invalid: Below minimum NPR 1,000'}
+                </div>
+                <h4>COD Pricing Breakdown:</h4>
+                <ul>
+                    <li><strong>Subtotal:</strong> NPR ${subtotal.toLocaleString()}</li>
+                    <li><strong>Shipping:</strong> NPR ${shippingCost} ${shippingCost === 0 ? '(Free over NPR 25,000)' : ''}</li>
+                    <li><strong>COD Fee:</strong> NPR ${codFee}</li>
+                    <li><strong>Tax (3%):</strong> NPR ${tax.toFixed(2)}</li>
+                    <li><strong>Total:</strong> NPR ${total.toFixed(2)}</li>
+                </ul>
+                ${!isValidOrder ? '<p style="color: red;"><strong>⚠️ Minimum order amount for COD is NPR 1,000</strong></p>' : ''}
+            `;
+        }
+
+        // Auto-run tests on page load
+        window.onload = function() {
+            testPaymentMethods();
+            testCODPricing();
+        };
+    </script>
+</body>
+</html>

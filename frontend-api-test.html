@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Frontend API Test - Ukriti Jewells</title>
+    <script src="https://cdn.jsdelivr.net/npm/js-cookie@3.0.1/dist/js.cookie.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; background: #f5f5f5; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .log { background: #f8f9fa; padding: 10px; margin: 10px 0; border-left: 4px solid #007bff; font-family: monospace; white-space: pre-wrap; }
+        .error { border-left-color: #dc3545; background: #fff5f5; }
+        .success { border-left-color: #28a745; background: #f8fff8; }
+        button { background: #007bff; color: white; border: none; padding: 10px 20px; margin: 5px; border-radius: 4px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        button:disabled { background: #6c757d; cursor: not-allowed; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Frontend API Debugging Tool</h1>
+        <p>This tool helps debug the frontend-backend API communication issues.</p>
+        
+        <div>
+            <button onclick="testLogin()">1. Test Admin Login</button>
+            <button onclick="testOrdersList()">2. Test Orders List</button>
+            <button onclick="testOrderDetails()">3. Test Order Details</button>
+            <button onclick="testSendEmail()">4. Test Send Email</button>
+            <button onclick="testDashboard()">5. Test Dashboard</button>
+            <button onclick="clearLogs()">Clear Logs</button>
+        </div>
+        
+        <div id="logs"></div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:3001/api';
+        let authToken = Cookies.get('token');
+        
+        function log(message, type = 'info') {
+            const logsDiv = document.getElementById('logs');
+            const logDiv = document.createElement('div');
+            logDiv.className = `log ${type}`;
+            logDiv.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logsDiv.appendChild(logDiv);
+            logsDiv.scrollTop = logsDiv.scrollHeight;
+            console.log(message);
+        }
+        
+        function clearLogs() {
+            document.getElementById('logs').innerHTML = '';
+        }
+        
+        async function testLogin() {
+            try {
+                log('🔑 Testing admin login...', 'info');
+                
+                const response = await fetch(`${API_BASE}/auth/admin-login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        email: 'admin@test.com',
+                        password: 'admin123'
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    authToken = data.token;
+                    Cookies.set('token', authToken);
+                    log(`✅ Login successful! Token: ${authToken.substring(0, 30)}...`, 'success');
+                } else {
+                    log(`❌ Login failed: ${data.message}`, 'error');
+                }
+            } catch (error) {
+                log(`❌ Login error: ${error.message}`, 'error');
+            }
+        }
+        
+        async function testOrdersList() {
+            if (!authToken) {
+                log('❌ Please login first!', 'error');
+                return;
+            }
+            
+            try {
+                log('📋 Testing orders list API...', 'info');
+                
+                const response = await fetch(`${API_BASE}/admin/orders?limit=5`, {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    log(`✅ Orders list success: ${data.orders?.length || 0} orders`, 'success');
+                    log(`📊 Response structure: ${JSON.stringify(Object.keys(data), null, 2)}`, 'info');
+                } else {
+                    log(`❌ Orders list failed: ${response.status} - ${data.message}`, 'error');
+                }
+            } catch (error) {
+                log(`❌ Orders list error: ${error.message}`, 'error');
+            }
+        }
+        
+        async function testOrderDetails() {
+            if (!authToken) {
+                log('❌ Please login first!', 'error');
+                return;
+            }
+            
+            try {
+                log('🔍 Testing order details API...', 'info');
+                
+                // First get orders list to get an order ID
+                const ordersResponse = await fetch(`${API_BASE}/admin/orders?limit=1`, {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const ordersData = await ordersResponse.json();
+                
+                if (!ordersData.orders || ordersData.orders.length === 0) {
+                    log('❌ No orders found to test details', 'error');
+                    return;
+                }
+                
+                const orderId = ordersData.orders[0]._id;
+                log(`📋 Testing with order ID: ${orderId}`, 'info');
+                
+                const response = await fetch(`${API_BASE}/admin/orders/${orderId}`, {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    log(`✅ Order details success: Order ${data.orderNumber}`, 'success');
+                    log(`📊 Order status: ${data.status}`, 'info');
+                } else {
+                    log(`❌ Order details failed: ${response.status} - ${data.message}`, 'error');
+                }
+            } catch (error) {
+                log(`❌ Order details error: ${error.message}`, 'error');
+            }
+        }
+        
+        async function testSendEmail() {
+            if (!authToken) {
+                log('❌ Please login first!', 'error');
+                return;
+            }
+            
+            try {
+                log('📧 Testing send email API...', 'info');
+                
+                // First get orders list to get an order ID
+                const ordersResponse = await fetch(`${API_BASE}/admin/orders?limit=1`, {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const ordersData = await ordersResponse.json();
+                
+                if (!ordersData.orders || ordersData.orders.length === 0) {
+                    log('❌ No orders found to test email', 'error');
+                    return;
+                }
+                
+                const orderId = ordersData.orders[0]._id;
+                log(`📧 Testing email with order ID: ${orderId}`, 'info');
+                
+                const response = await fetch(`${API_BASE}/admin/orders/${orderId}/email`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        emailType: 'confirmation'
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    log(`✅ Email API success: ${data.message}`, 'success');
+                } else {
+                    log(`❌ Email API failed: ${response.status} - ${data.message}`, 'error');
+                }
+            } catch (error) {
+                log(`❌ Email API error: ${error.message}`, 'error');
+            }
+        }
+        
+        async function testDashboard() {
+            if (!authToken) {
+                log('❌ Please login first!', 'error');
+                return;
+            }
+            
+            try {
+                log('📊 Testing dashboard API...', 'info');
+                
+                const response = await fetch(`${API_BASE}/admin/dashboard?period=30`, {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    log(`✅ Dashboard success: ${data.summary?.totalOrders || 0} orders`, 'success');
+                    log(`📊 Dashboard structure: ${JSON.stringify(Object.keys(data), null, 2)}`, 'info');
+                } else {
+                    log(`❌ Dashboard failed: ${response.status} - ${data.message}`, 'error');
+                }
+            } catch (error) {
+                log(`❌ Dashboard error: ${error.message}`, 'error');
+            }
+        }
+        
+        // Initialize
+        if (authToken) {
+            log(`🔑 Found existing token: ${authToken.substring(0, 30)}...`, 'info');
+        } else {
+            log('🔑 No auth token found. Please login first.', 'info');
+        }
+    </script>
+</body>
+</html>

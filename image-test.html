@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Image Display Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .test-section { margin-bottom: 30px; padding: 20px; border: 1px solid #ddd; border-radius: 8px; }
+        .image-test { display: flex; align-items: center; margin: 10px 0; }
+        .image-test img { width: 100px; height: 100px; object-fit: cover; margin-right: 15px; border: 1px solid #ccc; }
+        .image-info { flex: 1; }
+        .status { padding: 4px 8px; border-radius: 4px; color: white; font-size: 12px; }
+        .success { background-color: #4CAF50; }
+        .error { background-color: #f44336; }
+    </style>
+</head>
+<body>
+    <h1>🖼️ Image Display Test - Ukriti Jewells</h1>
+    
+    <div class="test-section">
+        <h2>Test 1: Relative URL (Backend serving)</h2>
+        <div class="image-test">
+            <img src="http://localhost:3001/uploads/products/product-1756487605339-29195034.png" 
+                 alt="Test Image" 
+                 onload="this.nextElementSibling.innerHTML='<span class=status success>✅ SUCCESS: Image loaded from backend</span>'"
+                 onerror="this.nextElementSibling.innerHTML='<span class=status error>❌ ERROR: Failed to load image</span>'">
+            <div class="image-info">
+                <strong>URL:</strong> http://localhost:3001/uploads/products/product-1756487605339-29195034.png<br>
+                <strong>Status:</strong> <span class="status">Loading...</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 2: Placeholder Image (Fallback)</h2>
+        <div class="image-test">
+            <img src="https://images.unsplash.com/photo-1573408301185-9146fe634ad0?w=400&h=400&fit=crop" 
+                 alt="Placeholder" 
+                 onload="this.nextElementSibling.innerHTML='<span class=status success>✅ SUCCESS: Placeholder image loaded</span>'"
+                 onerror="this.nextElementSibling.innerHTML='<span class=status error>❌ ERROR: Placeholder failed to load</span>'">
+            <div class="image-info">
+                <strong>URL:</strong> https://images.unsplash.com/photo-1573408301185-9146fe634ad0?w=400&h=400&fit=crop<br>
+                <strong>Status:</strong> <span class="status">Loading...</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 3: Fetch Products from API</h2>
+        <div id="products-test">
+            <button onclick="fetchProducts()">🔄 Fetch Products & Test Images</button>
+            <div id="products-result"></div>
+        </div>
+    </div>
+
+    <script>
+        // Helper function (same as in React components)
+        function getImageUrl(product) {
+            if (!product.images || !Array.isArray(product.images) || product.images.length === 0) {
+                return 'https://images.unsplash.com/photo-1573408301185-9146fe634ad0?w=400&h=400&fit=crop';
+            }
+
+            const firstImage = product.images[0];
+            
+            // If it's a string (file path)
+            if (typeof firstImage === 'string') {
+                return firstImage.startsWith('http') 
+                    ? firstImage 
+                    : `http://localhost:3001${firstImage}`;
+            }
+            
+            // If it's an object with url property
+            if (firstImage && typeof firstImage === 'object' && firstImage.url) {
+                return firstImage.url.startsWith('http') 
+                    ? firstImage.url 
+                    : `http://localhost:3001${firstImage.url}`;
+            }
+            
+            // Fallback to placeholder
+            return 'https://images.unsplash.com/photo-1573408301185-9146fe634ad0?w=400&h=400&fit=crop';
+        }
+
+        async function fetchProducts() {
+            const resultDiv = document.getElementById('products-result');
+            resultDiv.innerHTML = '<p>Loading products...</p>';
+            
+            try {
+                const response = await fetch('http://localhost:3001/api/products?limit=5');
+                const data = await response.json();
+                
+                if (response.ok && data.products) {
+                    let html = '<h3>Products from API:</h3>';
+                    data.products.forEach((product, index) => {
+                        const imageUrl = getImageUrl(product);
+                        const hasImages = product.images && product.images.length > 0;
+                        
+                        html += `
+                            <div class="image-test">
+                                <img src="${imageUrl}" 
+                                     alt="${product.name}" 
+                                     onload="updateStatus(${index}, 'success')"
+                                     onerror="updateStatus(${index}, 'error')">
+                                <div class="image-info">
+                                    <strong>Product:</strong> ${product.name}<br>
+                                    <strong>Has Images:</strong> ${hasImages ? 'Yes (' + product.images.length + ')' : 'No'}<br>
+                                    <strong>Generated URL:</strong> ${imageUrl}<br>
+                                    <strong>Status:</strong> <span id="status-${index}" class="status">Loading...</span>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    
+                    resultDiv.innerHTML = html;
+                } else {
+                    resultDiv.innerHTML = '<p class="status error">❌ Failed to fetch products</p>';
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<p class="status error">❌ Error: ${error.message}</p>`;
+            }
+        }
+
+        function updateStatus(index, status) {
+            const statusElement = document.getElementById(`status-${index}`);
+            if (statusElement) {
+                if (status === 'success') {
+                    statusElement.innerHTML = '<span class="status success">✅ Image loaded successfully</span>';
+                } else {
+                    statusElement.innerHTML = '<span class="status error">❌ Image failed to load</span>';
+                }
+            }
+        }
+    </script>
+</body>
+</html>
