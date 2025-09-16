@@ -1,9 +1,0 @@
-gh-pages
-.git
-node_modules
-*.log
-.DS_Store
-backend/node_modules
-backend/.env
-frontend/node_modules
-frontend/build
