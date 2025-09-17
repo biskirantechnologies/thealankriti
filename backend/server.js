@@ -1,5 +1,11 @@
 const express = require('express');
-const cors = require('cors');
+const co        'https://thealankriti-frontend.onrender.com',
+        'https://thealankriti.onrender.com',
+        'https://www.thealankriti.com',
+        'https://thealankriti.com',
+        // Add potential variations
+        'https://thealankriti-frontend-*.onrender.com',
+        'https://thealankriti-*.onrender.com' require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const compression = require('compression');
