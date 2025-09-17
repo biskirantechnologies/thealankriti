@@ -15,9 +15,9 @@ const LoadingSpinner = () => (
 );
 
 const ProtectedRoute = ({ children }) => {
-  const { user, loading } = useAuth();
+  const { user, isLoading } = useAuth();
   
-  if (loading) return <LoadingSpinner />;
+  if (isLoading) return <LoadingSpinner />;
   if (!user) return <Navigate to="/login" replace />;
   
   return children;
@@ -25,30 +25,84 @@ const ProtectedRoute = ({ children }) => {
 
 const AdminRoute = ({ children }) => {
   const { user, isLoading, isAdmin } = useAuth();
+  const [waitingForAuth, setWaitingForAuth] = React.useState(true);
   
-  // Debug logging
+  // Give auth context time to load after admin login
+  React.useEffect(() => {
+    const timer = setTimeout(() => {
+      console.log('⏰ AdminRoute: Wait period ended');
+      setWaitingForAuth(false);
+    }, 2000); // Increased to 2 seconds for more stability
+    
+    return () => clearTimeout(timer);
+  }, []);
+  
+  // Enhanced debug logging
   console.log('🛡️ AdminRoute check:', { 
     user: user ? { id: user.id, email: user.email, role: user.role } : null, 
     isLoading, 
-    isAdmin: isAdmin(), 
+    isAdmin: typeof isAdmin === 'function' ? isAdmin() : 'NOT_FUNCTION',
     userRole: user?.role,
+    waitingForAuth,
+    authState: {
+      hasToken: !!localStorage.getItem('authToken'),
+      hasUser: !!localStorage.getItem('user'),
+      hasAuthState: !!localStorage.getItem('authState')
+    },
     timestamp: new Date().toISOString()
   });
   
-  if (isLoading) {
-    console.log('⏳ AdminRoute: Loading...');
+  if (isLoading || waitingForAuth) {
+    console.log('⏳ AdminRoute: Loading... (isLoading:', isLoading, ', waitingForAuth:', waitingForAuth, ')');
     return <LoadingSpinner />;
   }
   
-  if (!user || !isAdmin()) {
-    console.log('🚫 AdminRoute: Access denied - redirecting to home');
-    console.log('   - User exists:', !!user);
-    console.log('   - User role:', user?.role);
-    console.log('   - isAdmin():', isAdmin());
-    return <Navigate to="/" replace />;
+  // Check for admin role - prioritize AuthContext over localStorage
+  let isUserAdmin = false;
+  
+  // Primary check: AuthContext user (most reliable)
+  if (user && (user.role === 'admin' || user.role === 'super_admin' || (typeof isAdmin === 'function' && isAdmin()))) {
+    isUserAdmin = true;
   }
   
-  console.log('✅ AdminRoute: Access granted - rendering admin content');
+  // Only use localStorage backup if user exists but role check failed
+  // This prevents logout issues by not overriding auth context
+  if (!isUserAdmin && user) {
+    try {
+      const storedUser = localStorage.getItem('user');
+      const storedAuthState = localStorage.getItem('authState');
+      
+      if (storedUser) {
+        const userData = JSON.parse(storedUser);
+        if (userData.role === 'admin' || userData.role === 'super_admin') {
+          isUserAdmin = true;
+          console.log('✅ AdminRoute: Access granted via localStorage backup check');
+        }
+      }
+      
+      if (!isUserAdmin && storedAuthState) {
+        const authData = JSON.parse(storedAuthState);
+        if (authData.user && (authData.user.role === 'admin' || authData.user.role === 'super_admin')) {
+          isUserAdmin = true;
+          console.log('✅ AdminRoute: Access granted via authState backup check');
+        }
+      }
+    } catch (error) {
+      console.error('Error checking localStorage for admin status:', error);
+    }
+  }
+  
+  if (!isUserAdmin) {
+    console.error('🚫 AdminRoute: Access DENIED - redirecting to admin login');
+    console.error('   - User exists:', !!user);
+    console.error('   - User role:', user?.role);
+    console.error('   - isAdmin() result:', typeof isAdmin === 'function' ? isAdmin() : 'NOT_FUNCTION');
+    console.error('   - localStorage checks failed');
+    
+    return <Navigate to="/admin-login" replace />;
+  }
+  
+  console.log('✅ AdminRoute: Access GRANTED - rendering admin content');
   return children;
 };
 

@@ -147,7 +147,7 @@ const HomePage = () => {
       id: product._id,
       name: product.name,
       price: product.price,
-      image: getImageUrl(product.images?.[0]),
+      image: getImageUrlForProduct(product.images?.[0]),
       quantity: 1
     });
   };
@@ -304,7 +304,7 @@ const HomePage = () => {
                 >
                   <div className="relative overflow-hidden">
                     <img
-                      src={getImageUrl(product.images?.[0])}
+                      src={getImageUrlForProduct(product.images?.[0])}
                       alt={product.name}
                       className="w-full aspect-square object-cover group-hover:scale-105 transition-transform duration-500"
                     />

@@ -344,6 +344,16 @@ router.get('/products', adminAuth, async (req, res) => {
 
     const totalProducts = await Product.countDocuments(filter);
 
+    // Debug logging
+    console.log(`📦 Admin GET /products - Found ${products.length} products`);
+    if (products.length > 0) {
+      console.log('📦 Product image details:');
+      products.forEach((product, index) => {
+        console.log(`  ${index + 1}. ${product.name} - Images:`, JSON.stringify(product.images, null, 2));
+      });
+      console.log('📦 Products with images:', products.filter(p => p.images && p.images.length > 0).length);
+    }
+
     res.json({
       products,
       pagination: {

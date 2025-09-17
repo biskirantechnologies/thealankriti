@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import {
   HomeIcon,
@@ -15,6 +15,7 @@ import {
 const AdminLayout = ({ children }) => {
   const { user, logout } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const navigation = [
@@ -26,7 +27,19 @@ const AdminLayout = ({ children }) => {
   ];
 
   const handleLogout = () => {
+    console.log('🚪 AdminLayout: Logout button clicked');
+    console.log('🔄 Before logout - Auth state:', { user, isAuthenticated: !!user });
+    
+    // Clear admin-specific localStorage items
+    localStorage.removeItem('adminLoginSuccess');
+    localStorage.removeItem('sessionType');
+    
+    // Call the auth context logout
     logout();
+    
+    console.log('✅ AdminLayout: Logout called, navigating to login');
+    // Navigate to login page after logout
+    navigate('/admin/login', { replace: true });
   };
 
   const isCurrentPath = (path) => {

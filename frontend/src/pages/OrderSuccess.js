@@ -48,10 +48,10 @@ const OrderSuccess = () => {
           ],
           shippingAddress: {
             name: 'John Doe',
-            address: '123 Main Street, Apartment 4B',
-            city: 'Mumbai',
-            state: 'Maharashtra',
-            pincode: '400001'
+            address: 'Balkumari Street, House 4B',
+            city: 'Lalitpur',
+            state: 'Bagmati Province',
+            pincode: '44700'
           }
         };
         setOrder(mockOrder);

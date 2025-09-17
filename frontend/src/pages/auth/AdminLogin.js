@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { EyeIcon, EyeSlashIcon, ShieldCheckIcon, ComputerDesktopIcon } from '@heroicons/react/24/outline';
@@ -11,7 +11,7 @@ import emergencyAuth from '../../services/emergencyAuth';
 const AdminLogin = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { login } = useAuth();
+  const { login, user, isAdmin } = useAuth();
   
   const [formData, setFormData] = useState({
     email: '',
@@ -22,6 +22,14 @@ const AdminLogin = () => {
   const [connectionStatus, setConnectionStatus] = useState('connecting');
 
   const from = location.state?.from?.pathname || '/admin';
+
+  // Monitor auth context for successful admin login - simplified
+  useEffect(() => {
+    if (user && (user.role === 'admin' || user.role === 'super_admin' || isAdmin()) && !isLoading) {
+      console.log('🎯 AdminLogin: Auth context has admin user, redirecting...');
+      navigate('/admin', { replace: true });
+    }
+  }, [user, isAdmin, isLoading, navigate]);
 
   // Enhanced connection check and session restoration
   React.useEffect(() => {
@@ -87,14 +95,8 @@ const AdminLogin = () => {
       console.log('� Starting ENHANCED admin login process...');
       console.log('📧 Login credentials:', { email: formData.email, hasPassword: !!formData.password });
       
-      // First try emergency auth system for better session handling
-      let result = await emergencyAuth.login(formData, true);
-      
-      if (!result.success) {
-        console.log('🔄 Emergency auth failed, trying standard auth...');
-        // Fallback to standard auth
-        result = await login(formData, true);
-      }
+      // Use standard auth system - more reliable and direct
+      const result = await login(formData, true);
       
       console.log('📊 Final login result:', result);
       
@@ -106,11 +108,9 @@ const AdminLogin = () => {
         localStorage.setItem('adminLoginSuccess', new Date().toISOString());
         localStorage.setItem('sessionType', 'admin');
         
-        // Add a small delay to ensure auth context is updated
-        setTimeout(() => {
-          console.log('🚀 Navigating to /admin...');
-          navigate('/admin', { replace: true });
-        }, 500); // Slightly longer delay for stability
+        // Direct navigation - the useEffect will handle this automatically
+        // when the auth context updates, no complex async logic needed
+        console.log('⏳ Auth context will handle navigation...');
       } else {
         console.error('❌ All login methods failed:', result);
         throw new Error(result?.error || 'Login failed');
@@ -118,15 +118,8 @@ const AdminLogin = () => {
     } catch (error) {
       console.error('💥 Admin login error:', error);
       
-      // Enhanced error handling
-      if (error.message && error.message.includes('session')) {
-        toast.error('Session issue detected. Clearing cache and retrying...');
-        // Clear all auth data and try once more
-        emergencyAuth.clearAuth();
-        setTimeout(() => {
-          toast('Please try logging in again.', { icon: '🔄' });
-        }, 1000);
-      } else if (error.message && error.message.includes('not authorized')) {
+      // Simplified error handling
+      if (error.message && error.message.includes('not authorized')) {
         toast.error('Access denied: Admin privileges required');
       } else if (error.message && error.message.includes('not found')) {
         toast.error('Account not found. Please contact system administrator.');

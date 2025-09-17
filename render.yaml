@@ -1,17 +1,19 @@
 services:
+  # Backend API Service
   - type: web
     name: thealankriti-backend
     runtime: node
     rootDir: backend
     buildCommand: npm install
     startCommand: npm start
+    healthCheckPath: /health
     envVars:
       - key: NODE_ENV
         value: production
       - key: MONGODB_URI
         value: mongodb+srv://thealankriti_db_user:ZwHIC6cxgHdKzy50@thealankriti.b27onwb.mongodb.net/?retryWrites=true&w=majority&appName=thealankriti
       - key: JWT_SECRET
-        value: The Alankriti-jewells-super-secret-key-2024
+        value: The-Alankriti-jewells-super-secret-key-2024
       - key: PORT
         value: "10000"
       - key: ADMIN_EMAIL
@@ -20,9 +22,17 @@ services:
         value: admin123
       - key: JWT_EXPIRE
         value: 7d
+      - key: FRONTEND_URL
+        value: https://thealankriti-frontend.onrender.com
+    disk:
+      name: uploads
+      mountPath: /opt/render/project/src/backend/uploads
+      sizeGB: 1
 
-  - type: static
+  # Frontend React App (Static Site)
+  - type: web
     name: thealankriti-frontend
+    runtime: static
     rootDir: frontend
     buildCommand: npm install && npm run build
     staticPublishPath: build
@@ -32,4 +42,4 @@ services:
         destination: /index.html
     envVars:
       - key: REACT_APP_API_URL
-        value: https://thealankriti-backendd.onrender.com/api
+        value: https://thealankriti-backend.onrender.com

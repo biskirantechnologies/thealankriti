@@ -17,7 +17,7 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  const from = location.state?.from?.pathname || '/';
+  const from = location.state?.from?.pathname || '/dashboard';
 
   const handleChange = (e) => {
     setFormData({
@@ -31,9 +31,17 @@ const Login = () => {
     setIsLoading(true);
 
     try {
-      await login(formData.email, formData.password);
-      toast.success('Login successful!');
-      navigate(from, { replace: true });
+      const result = await login(formData.email, formData.password);
+      
+      if (result.success) {
+        toast.success('Login successful!');
+        // Wait a moment to ensure the auth state is properly updated
+        setTimeout(() => {
+          navigate(from, { replace: true });
+        }, 100);
+      } else {
+        toast.error(result.error || 'Login failed. Please try again.');
+      }
     } catch (error) {
       toast.error(error.message || 'Login failed. Please try again.');
     } finally {

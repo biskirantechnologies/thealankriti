@@ -156,7 +156,7 @@ const AdminProducts = () => {
                 <div key={product._id} className="border border-gray-200 rounded-lg overflow-hidden hover:shadow-lg transition-shadow">
                   <div className="aspect-w-1 aspect-h-1 bg-gray-200">
                     <img
-                      src={product.images?.[0] || '/api/placeholder/300/300'}
+                      src={product.images?.[0] || 'https://via.placeholder.com/300x300/f3f4f6/6b7280?text=No+Image'}
                       alt={product.name}
                       className="w-full h-40 sm:h-48 object-cover"
                     />

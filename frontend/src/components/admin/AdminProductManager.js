@@ -85,7 +85,11 @@ const AdminProductManager = () => {
         sortOrder: sortOrder
       };
       
+      console.log('🔍 Fetching products with params:', params);
       const response = await adminAPI.getProducts(params);
+      console.log('📦 Fetched products response:', response.data);
+      console.log('📦 Products array:', response.data.products);
+      
       setProducts(response.data.products || []);
       setTotalPages(response.data.pagination?.totalPages || 1);
       setTotalProducts(response.data.pagination?.totalProducts || 0);
@@ -166,26 +170,46 @@ const AdminProductManager = () => {
 
   // Helper function to get image URL
   const getImageUrl = (product) => {
+    console.log('🖼️ getImageUrl called for product:', product.name);
+    console.log('🖼️ Product images:', product.images);
+    
     if (!product.images || !product.images.length) {
-      return '/api/placeholder/300/300';
+      console.log('🖼️ No images found, using placeholder');
+      return 'https://via.placeholder.com/300x300/f3f4f6/6b7280?text=No+Image';
     }
 
     const firstImage = product.images[0];
+    console.log('🖼️ First image:', firstImage, 'Type:', typeof firstImage);
+    
+    let imageUrl = '';
     
     // If it's a string (new format)
     if (typeof firstImage === 'string') {
-      return firstImage.startsWith('http') 
+      imageUrl = firstImage.startsWith('http') 
         ? firstImage 
         : `http://localhost:3001${firstImage}`;
+      console.log('🖼️ String format image URL:', imageUrl);
     }
-    
-    // If it's an object with url property (old format)
-    if (firstImage && typeof firstImage === 'object' && firstImage.url) {
-      return firstImage.url;
+    // If it's an object with url property (database format)
+    else if (firstImage && typeof firstImage === 'object' && firstImage.url) {
+      imageUrl = firstImage.url.startsWith('http') 
+        ? firstImage.url 
+        : `http://localhost:3001${firstImage.url}`;
+      console.log('🖼️ Object format image URL:', imageUrl);
     }
-    
     // Fallback
-    return '/api/placeholder/300/300';
+    else {
+      console.log('🖼️ Invalid image format, using fallback placeholder');
+      return 'https://via.placeholder.com/300x300/f3f4f6/6b7280?text=Invalid+Format';
+    }
+    
+    // Ensure the URL is absolute and correct
+    if (!imageUrl.startsWith('http')) {
+      imageUrl = `http://localhost:3001${imageUrl}`;
+    }
+    
+    console.log('🖼️ Final image URL:', imageUrl);
+    return imageUrl;
   };
 
   const resetImageState = () => {

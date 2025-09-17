@@ -97,9 +97,8 @@ const Footer = () => {
               <div className="flex items-start">
                 <MapPinIcon className="h-5 w-5 text-amber-400 mr-3 mt-1 flex-shrink-0" />
                 <span>
-                  123 Jewelry Street,<br />
-                  Mumbai, Maharashtra 400001<br />
-                  India
+                  Balkumari, Lalitpur,<br />
+                  Kathmandu, Nepal
                 </span>
               </div>
             </div>
