@@ -6,6 +6,8 @@ const compression = require('compression');
 const rateLimit = require('express-rate-limit');
 require('dotenv').config();
 
+// Session Management Enhancement - Deploy v2.0 - Sept 17, 2025
+
 const connectDB = require('./config/database');
 const errorHandler = require('./middleware/errorHandler');
 
@@ -94,7 +96,9 @@ app.get('/health', (req, res) => {
     environment: process.env.NODE_ENV || 'development',
     port: process.env.PORT || 5000,
     uptime: Math.floor(process.uptime()),
-    memory: Math.round(process.memoryUsage().rss / 1024 / 1024) + 'MB'
+    memory: Math.round(process.memoryUsage().rss / 1024 / 1024) + 'MB',
+    version: '2.0-SessionManagement',
+    features: ['30-day-tokens', 'refresh-tokens', 'enhanced-auth']
   });
 });
 

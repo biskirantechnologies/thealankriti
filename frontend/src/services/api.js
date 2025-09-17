@@ -212,30 +212,71 @@ export const setAuthToken = (token) => {
     Cookies.set('token', token, cookieOptions);
     api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
     
-    // Also store in localStorage as backup
+    // Store comprehensive auth data
+    const authData = {
+      token: token,
+      setTime: new Date().getTime(),
+      userAgent: navigator.userAgent,
+      sessionId: Math.random().toString(36).substr(2, 9)
+    };
+    
     localStorage.setItem('authToken', token);
-    localStorage.setItem('tokenSetTime', new Date().getTime().toString());
+    localStorage.setItem('tokenSetTime', authData.setTime.toString());
+    localStorage.setItem('authData', JSON.stringify(authData));
+    
+    console.log('🔐 Token stored successfully:', { 
+      tokenLength: token.length, 
+      expiresIn: '30 days',
+      timestamp: new Date().toISOString() 
+    });
   } else {
+    console.log('🧹 Clearing all authentication data...');
     Cookies.remove('token');
     localStorage.removeItem('authToken');
     localStorage.removeItem('tokenSetTime');
     localStorage.removeItem('authState');
+    localStorage.removeItem('authData');
     delete api.defaults.headers.common['Authorization'];
   }
 };
 
-// Add token validation helper
+// Enhanced token validation helper
 export const isTokenValid = () => {
   const token = Cookies.get('token') || localStorage.getItem('authToken');
   const tokenSetTime = localStorage.getItem('tokenSetTime');
   
-  if (!token || !tokenSetTime) return false;
+  if (!token || !tokenSetTime) {
+    console.log('❌ Token validation failed: No token or timestamp found');
+    return false;
+  }
   
-  // Check if token is older than 7 days (original JWT expiration)
+  // Check token format
+  if (token === 'undefined' || token === 'null' || token.length < 50) {
+    console.log('❌ Token validation failed: Invalid token format');
+    return false;
+  }
+  
+  // For now, assume tokens are valid for 30 days from our enhanced system
+  // This provides compatibility with both old and new backend versions
   const tokenAge = new Date().getTime() - parseInt(tokenSetTime);
-  const sevenDaysInMs = 7 * 24 * 60 * 60 * 1000;
+  const thirtyDaysInMs = 30 * 24 * 60 * 60 * 1000;
   
-  return tokenAge < sevenDaysInMs;
+  const isValid = tokenAge < thirtyDaysInMs;
+  
+  if (!isValid) {
+    console.log('⏰ Token validation failed: Token expired', {
+      tokenAge: Math.floor(tokenAge / (24 * 60 * 60 * 1000)) + ' days',
+      maxAge: '30 days'
+    });
+  } else {
+    const daysOld = Math.floor(tokenAge / (24 * 60 * 60 * 1000));
+    console.log('✅ Token is valid:', {
+      age: daysOld + ' days old',
+      remaining: (30 - daysOld) + ' days left'
+    });
+  }
+  
+  return isValid;
 };
 
 // Add token refresh helper

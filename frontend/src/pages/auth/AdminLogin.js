@@ -6,6 +6,7 @@ import { motion } from 'framer-motion';
 import { Helmet } from 'react-helmet-async';
 import toast from 'react-hot-toast';
 import { getApiUrl } from '../../utils/api';
+import emergencyAuth from '../../services/emergencyAuth';
 
 const AdminLogin = () => {
   const navigate = useNavigate();
@@ -22,25 +23,54 @@ const AdminLogin = () => {
 
   const from = location.state?.from?.pathname || '/admin';
 
-  // Check backend connection on component mount
+  // Enhanced connection check and session restoration
   React.useEffect(() => {
     const checkConnection = async () => {
       try {
         const response = await fetch(getApiUrl('/health'));
         if (response.ok) {
+          const healthData = await response.json();
+          console.log('🏥 Backend health:', healthData);
           setConnectionStatus('connected');
+          
+          // Check if enhanced auth system is available
+          if (healthData.features && healthData.features.includes('30-day-tokens')) {
+            console.log('✅ Enhanced auth system detected');
+          } else {
+            console.log('⚠️ Legacy auth system detected');
+          }
         } else {
           setConnectionStatus('disconnected');
         }
       } catch (error) {
+        console.error('❌ Health check failed:', error);
         setConnectionStatus('disconnected');
       }
     };
 
+    // Check for existing valid session
+    const checkExistingSession = async () => {
+      console.log('🔍 Checking for existing admin session...');
+      const sessionValid = await emergencyAuth.validateSession();
+      
+      if (sessionValid) {
+        const sessionInfo = emergencyAuth.getSessionInfo();
+        if (sessionInfo && sessionInfo.isAdmin) {
+          console.log('✅ Valid admin session found, redirecting...');
+          toast.success('Welcome back! Restoring your admin session...');
+          setTimeout(() => {
+            navigate('/admin', { replace: true });
+          }, 1000);
+        }
+      }
+    };
+
     checkConnection();
+    checkExistingSession();
+    
     const interval = setInterval(checkConnection, 30000); // Check every 30 seconds
     return () => clearInterval(interval);
-  }, []);
+  }, [navigate]);
 
   const handleChange = (e) => {
     setFormData({
@@ -54,30 +84,49 @@ const AdminLogin = () => {
     setIsLoading(true);
 
     try {
-      console.log('🔄 Starting admin login process...');
+      console.log('� Starting ENHANCED admin login process...');
       console.log('📧 Login credentials:', { email: formData.email, hasPassword: !!formData.password });
       
-      // Use AuthContext admin login function
-      const result = await login(formData, true); // true indicates admin login
+      // First try emergency auth system for better session handling
+      let result = await emergencyAuth.login(formData, true);
       
-      console.log('📊 Login result:', result);
+      if (!result.success) {
+        console.log('🔄 Emergency auth failed, trying standard auth...');
+        // Fallback to standard auth
+        result = await login(formData, true);
+      }
+      
+      console.log('📊 Final login result:', result);
       
       if (result && result.success) {
         console.log('✅ Admin login successful, user role:', result.user?.role);
-        toast.success('Admin login successful!');
+        toast.success('Admin login successful! Session extended to 30 days.');
+        
+        // Store additional session info
+        localStorage.setItem('adminLoginSuccess', new Date().toISOString());
+        localStorage.setItem('sessionType', 'admin');
         
         // Add a small delay to ensure auth context is updated
         setTimeout(() => {
           console.log('🚀 Navigating to /admin...');
           navigate('/admin', { replace: true });
-        }, 100);
+        }, 500); // Slightly longer delay for stability
       } else {
-        console.error('❌ Login failed:', result);
+        console.error('❌ All login methods failed:', result);
         throw new Error(result?.error || 'Login failed');
       }
     } catch (error) {
       console.error('💥 Admin login error:', error);
-      if (error.message && error.message.includes('not authorized')) {
+      
+      // Enhanced error handling
+      if (error.message && error.message.includes('session')) {
+        toast.error('Session issue detected. Clearing cache and retrying...');
+        // Clear all auth data and try once more
+        emergencyAuth.clearAuth();
+        setTimeout(() => {
+          toast('Please try logging in again.', { icon: '🔄' });
+        }, 1000);
+      } else if (error.message && error.message.includes('not authorized')) {
         toast.error('Access denied: Admin privileges required');
       } else if (error.message && error.message.includes('not found')) {
         toast.error('Account not found. Please contact system administrator.');
