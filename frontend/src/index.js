@@ -1,6 +1,6 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import { HashRouter } from 'react-router-dom';
+import { BrowserRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from 'react-query';
 import { HelmetProvider } from 'react-helmet-async';
 import { Toaster } from 'react-hot-toast';
@@ -28,7 +28,7 @@ root.render(
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>
       <HelmetProvider>
-        <HashRouter>
+        <BrowserRouter>
           <AuthProvider>
             <CartProvider>
               <App />
@@ -56,7 +56,7 @@ root.render(
               />
             </CartProvider>
           </AuthProvider>
-        </HashRouter>
+        </BrowserRouter>
       </HelmetProvider>
 
     </QueryClientProvider>

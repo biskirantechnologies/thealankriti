@@ -87,10 +87,16 @@ if ($global:AuthToken) {
 Write-Host ""
 Write-Host "🌐 Test 4: Frontend Access" -ForegroundColor Cyan
 try {
-    $response = Invoke-WebRequest -Uri "$FrontendUrl/admin-login" -TimeoutSec 10
-    Write-Host "✅ Frontend Admin Login Page: Available ($($response.StatusCode))" -ForegroundColor Green
+    # Test main frontend first
+    $response = Invoke-WebRequest -Uri "$FrontendUrl" -TimeoutSec 10
+    Write-Host "✅ Frontend Home Page: Available ($($response.StatusCode))" -ForegroundColor Green
+    
+    # Test admin login page
+    $adminResponse = Invoke-WebRequest -Uri "$FrontendUrl/admin-login" -TimeoutSec 10
+    Write-Host "✅ Frontend Admin Login Page: Available ($($adminResponse.StatusCode))" -ForegroundColor Green
 } catch {
-    Write-Host "❌ Frontend Admin Login Page: Failed - $($_.Exception.Message)" -ForegroundColor Red
+    Write-Host "❌ Frontend Access Failed: $($_.Exception.Message)" -ForegroundColor Red
+    Write-Host "   This might be normal if using HashRouter - try: $FrontendUrl/#/admin-login" -ForegroundColor Yellow
 }
 
 # Test Results Summary
