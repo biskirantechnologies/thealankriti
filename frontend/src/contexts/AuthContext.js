@@ -133,13 +133,19 @@ export const AuthProvider = ({ children }) => {
 
   // Login function
   const login = async (credentials, isAdmin = false) => {
+    console.log(`🔑 AuthContext login started - isAdmin: ${isAdmin}`);
     dispatch({ type: AuthActionTypes.LOGIN_START });
     
     try {
       const endpoint = isAdmin ? authAPI.adminLogin : authAPI.login;
+      console.log('📡 Calling API endpoint:', isAdmin ? 'adminLogin' : 'login');
+      
       const response = await endpoint(credentials);
+      console.log('📥 API response received:', response.data);
       
       const { user, token } = response.data;
+      console.log('👤 User data:', user);
+      console.log('🎫 Token received:', token ? 'YES' : 'NO');
       
       // Store token
       setAuthToken(token);
@@ -148,6 +154,8 @@ export const AuthProvider = ({ children }) => {
         type: AuthActionTypes.LOGIN_SUCCESS,
         payload: { user, token },
       });
+      
+      console.log('✅ Auth context updated successfully');
       
       // Initialize user data tracking after successful login
       try {
@@ -160,6 +168,7 @@ export const AuthProvider = ({ children }) => {
         
         // Initialize tracking systems
         userDataService.initializeTracking();
+        console.log('📊 User tracking initialized');
       } catch (trackingError) {
         console.error('Error initializing user tracking:', trackingError);
         // Don't fail login if tracking fails
@@ -167,6 +176,9 @@ export const AuthProvider = ({ children }) => {
       
       return { success: true, user };
     } catch (error) {
+      console.error('💥 AuthContext login error:', error);
+      console.error('📄 Error response:', error.response?.data);
+      
       const errorMessage = error.response?.data?.message || 'Login failed';
       dispatch({
         type: AuthActionTypes.LOGIN_FAILURE,

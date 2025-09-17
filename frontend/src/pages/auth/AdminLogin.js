@@ -54,18 +54,29 @@ const AdminLogin = () => {
     setIsLoading(true);
 
     try {
+      console.log('🔄 Starting admin login process...');
+      console.log('📧 Login credentials:', { email: formData.email, hasPassword: !!formData.password });
+      
       // Use AuthContext admin login function
       const result = await login(formData, true); // true indicates admin login
       
+      console.log('📊 Login result:', result);
+      
       if (result && result.success) {
+        console.log('✅ Admin login successful, user role:', result.user?.role);
         toast.success('Admin login successful!');
-        // Force navigation to admin dashboard
-        navigate('/admin', { replace: true });
+        
+        // Add a small delay to ensure auth context is updated
+        setTimeout(() => {
+          console.log('🚀 Navigating to /admin...');
+          navigate('/admin', { replace: true });
+        }, 100);
       } else {
+        console.error('❌ Login failed:', result);
         throw new Error(result?.error || 'Login failed');
       }
     } catch (error) {
-      console.error('Admin login error:', error);
+      console.error('💥 Admin login error:', error);
       if (error.message && error.message.includes('not authorized')) {
         toast.error('Access denied: Admin privileges required');
       } else if (error.message && error.message.includes('not found')) {

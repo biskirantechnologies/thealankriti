@@ -23,17 +23,31 @@ const ProtectedRoute = ({ children }) => {
 };
 
 const AdminRoute = ({ children }) => {
-  const { user, loading, isAdmin } = useAuth();
+  const { user, isLoading, isAdmin } = useAuth();
   
   // Debug logging
-  console.log('AdminRoute check:', { user, loading, isAdmin: isAdmin(), userRole: user?.role });
+  console.log('🛡️ AdminRoute check:', { 
+    user: user ? { id: user.id, email: user.email, role: user.role } : null, 
+    isLoading, 
+    isAdmin: isAdmin(), 
+    userRole: user?.role,
+    timestamp: new Date().toISOString()
+  });
   
-  if (loading) return <LoadingSpinner />;
+  if (isLoading) {
+    console.log('⏳ AdminRoute: Loading...');
+    return <LoadingSpinner />;
+  }
+  
   if (!user || !isAdmin()) {
-    console.log('AdminRoute: Redirecting to home - user:', user, 'isAdmin:', isAdmin());
+    console.log('🚫 AdminRoute: Access denied - redirecting to home');
+    console.log('   - User exists:', !!user);
+    console.log('   - User role:', user?.role);
+    console.log('   - isAdmin():', isAdmin());
     return <Navigate to="/" replace />;
   }
   
+  console.log('✅ AdminRoute: Access granted - rendering admin content');
   return children;
 };
 
@@ -80,42 +94,59 @@ function App() {
   return (
     <>
       <ScrollToTop />
-      <Layout>
-        <Suspense fallback={<LoadingSpinner />}>
-          <Routes>
-            {/* Public Routes */}
-            <Route path="/" element={<HomePage />} />
-            <Route path="/products" element={<Products />} />
-            <Route path="/products/:id" element={<ProductDetail />} />
-            <Route path="/collections" element={<Collections />} />
-            <Route path="/about" element={<About />} />
-            <Route path="/contact" element={<Contact />} />
-            <Route path="/track-order" element={<TrackOrder />} />
-              
-              {/* Auth Routes */}
-              <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<Register />} />
-              <Route path="/admin-login" element={<AdminLogin />} />
-              
-              {/* Protected Routes */}
-              <Route path="/cart" element={<Cart />} />
-              <Route path="/checkout" element={<ProtectedRoute><Checkout /></ProtectedRoute>} />
-              <Route path="/order-success/:orderId" element={<ProtectedRoute><OrderSuccess /></ProtectedRoute>} />
-              <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-              <Route path="/orders" element={<ProtectedRoute><Orders /></ProtectedRoute>} />
-              <Route path="/orders/:id" element={<ProtectedRoute><OrderDetail /></ProtectedRoute>} />
-              <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-              
-              {/* Admin Routes */}
-              <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
-              <Route path="/admin/*" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
-              
-              {/* 404 Route */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </Suspense>
-        </Layout>
-        <Toaster position="top-right" />
+      <Suspense fallback={<LoadingSpinner />}>
+        <Routes>
+          {/* Admin Routes - Use AdminLayout instead of regular Layout */}
+          <Route path="/admin/*" element={
+            <AdminRoute>
+              <AdminLayout>
+                <AdminDashboard />
+              </AdminLayout>
+            </AdminRoute>
+          } />
+          <Route path="/admin" element={
+            <AdminRoute>
+              <AdminLayout>
+                <AdminDashboard />
+              </AdminLayout>
+            </AdminRoute>
+          } />
+          
+          {/* All other routes use regular Layout */}
+          <Route path="/*" element={
+            <Layout>
+              <Routes>
+                {/* Public Routes */}
+                <Route path="/" element={<HomePage />} />
+                <Route path="/products" element={<Products />} />
+                <Route path="/products/:id" element={<ProductDetail />} />
+                <Route path="/collections" element={<Collections />} />
+                <Route path="/about" element={<About />} />
+                <Route path="/contact" element={<Contact />} />
+                <Route path="/track-order" element={<TrackOrder />} />
+                
+                {/* Auth Routes */}
+                <Route path="/login" element={<Login />} />
+                <Route path="/register" element={<Register />} />
+                <Route path="/admin-login" element={<AdminLogin />} />
+                
+                {/* Protected Routes */}
+                <Route path="/cart" element={<Cart />} />
+                <Route path="/checkout" element={<ProtectedRoute><Checkout /></ProtectedRoute>} />
+                <Route path="/order-success/:orderId" element={<ProtectedRoute><OrderSuccess /></ProtectedRoute>} />
+                <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+                <Route path="/orders" element={<ProtectedRoute><Orders /></ProtectedRoute>} />
+                <Route path="/orders/:id" element={<ProtectedRoute><OrderDetail /></ProtectedRoute>} />
+                <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+                
+                {/* 404 Route */}
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </Layout>
+          } />
+        </Routes>
+      </Suspense>
+      <Toaster position="top-right" />
     </>
   );
 }

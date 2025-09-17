@@ -14,6 +14,12 @@ services:
         value: The Alankriti-jewells-super-secret-key-2024
       - key: PORT
         value: "10000"
+      - key: ADMIN_EMAIL
+        value: bewithu.aj@gmail.com
+      - key: ADMIN_PASSWORD
+        value: admin123
+      - key: JWT_EXPIRE
+        value: 7d
 
   - type: static
     name: thealankriti-frontend
