@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Frontend API URL Diagnostic</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; background: #f5f5f5; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .status { padding: 15px; margin: 10px 0; border-radius: 4px; }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        .test-btn { background: #007bff; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; margin: 5px; }
+        .test-btn:hover { background: #0056b3; }
+        pre { background: #f8f9fa; padding: 15px; border-radius: 4px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Frontend API Configuration Diagnostic</h1>
+        
+        <div id="env-info" class="status info">
+            <h3>Environment Information</h3>
+            <p><strong>Current Domain:</strong> <span id="current-domain"></span></p>
+            <p><strong>REACT_APP_API_URL:</strong> <span id="env-api-url"></span></p>
+            <p><strong>Fallback API URL:</strong> <span id="fallback-url"></span></p>
+            <p><strong>Actual API Base:</strong> <span id="actual-api-base"></span></p>
+        </div>
+
+        <div id="test-results">
+            <h3>Connection Tests</h3>
+            <button class="test-btn" onclick="testBackendHealth()">Test Backend Health</button>
+            <button class="test-btn" onclick="testAPIEndpoint()">Test API Endpoint</button>
+            <button class="test-btn" onclick="testCORS()">Test CORS</button>
+            
+            <div id="test-output"></div>
+        </div>
+    </div>
+
+    <script>
+        // Display environment information
+        document.getElementById('current-domain').textContent = window.location.hostname;
+        document.getElementById('env-api-url').textContent = process?.env?.REACT_APP_API_URL || 'Not set';
+        
+        const fallbackUrl = window.location.hostname === 'localhost' 
+            ? 'http://localhost:3001/api' 
+            : 'https://thealankriti-backendd.onrender.com/api';
+        document.getElementById('fallback-url').textContent = fallbackUrl;
+        
+        const actualApiBase = process?.env?.REACT_APP_API_URL || fallbackUrl;
+        document.getElementById('actual-api-base').textContent = actualApiBase;
+
+        function addResult(message, isSuccess = true) {
+            const output = document.getElementById('test-output');
+            const div = document.createElement('div');
+            div.className = `status ${isSuccess ? 'success' : 'error'}`;
+            div.innerHTML = message;
+            output.appendChild(div);
+        }
+
+        async function testBackendHealth() {
+            try {
+                const healthUrl = actualApiBase.replace('/api', '/health');
+                addResult(`Testing: ${healthUrl}`, true);
+                
+                const response = await fetch(healthUrl);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    addResult(`✅ Backend Health: OK (${response.status})<br><pre>${JSON.stringify(data, null, 2)}</pre>`, true);
+                } else {
+                    addResult(`❌ Backend Health: Failed (${response.status})`, false);
+                }
+            } catch (error) {
+                addResult(`❌ Backend Health: Error - ${error.message}`, false);
+            }
+        }
+
+        async function testAPIEndpoint() {
+            try {
+                const apiUrl = `${actualApiBase}/products`;
+                addResult(`Testing: ${apiUrl}`, true);
+                
+                const response = await fetch(apiUrl);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    addResult(`✅ API Endpoint: OK (${response.status}) - ${data.products?.length || 0} products found`, true);
+                } else {
+                    addResult(`❌ API Endpoint: Failed (${response.status})`, false);
+                }
+            } catch (error) {
+                addResult(`❌ API Endpoint: Error - ${error.message}`, false);
+            }
+        }
+
+        async function testCORS() {
+            try {
+                const corsUrl = `${actualApiBase}/debug`;
+                addResult(`Testing CORS: ${corsUrl}`, true);
+                
+                const response = await fetch(corsUrl, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    addResult(`✅ CORS: OK (${response.status})<br><pre>${JSON.stringify(data, null, 2)}</pre>`, true);
+                } else {
+                    addResult(`❌ CORS: Failed (${response.status})`, false);
+                }
+            } catch (error) {
+                addResult(`❌ CORS: Error - ${error.message}`, false);
+            }
+        }
+
+        // Auto-run tests on page load
+        window.onload = () => {
+            setTimeout(() => {
+                testBackendHealth();
+                setTimeout(() => testAPIEndpoint(), 1000);
+                setTimeout(() => testCORS(), 2000);
+            }, 500);
+        };
+    </script>
+</body>
+</html>

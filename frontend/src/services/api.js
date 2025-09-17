@@ -4,7 +4,7 @@ import toast from 'react-hot-toast';
 
 // Create axios instance
 const api = axios.create({
-  baseURL: process.env.REACT_APP_API_URL || 'http://localhost:3001/api',
+  baseURL: process.env.REACT_APP_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:3001/api' : 'https://thealankriti-backendd.onrender.com/api'),
   timeout: 30000,
   headers: {
     'Content-Type': 'application/json',

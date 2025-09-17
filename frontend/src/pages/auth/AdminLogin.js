@@ -5,6 +5,7 @@ import { EyeIcon, EyeSlashIcon, ShieldCheckIcon, ComputerDesktopIcon } from '@he
 import { motion } from 'framer-motion';
 import { Helmet } from 'react-helmet-async';
 import toast from 'react-hot-toast';
+import { getApiUrl } from '../../utils/api';
 
 const AdminLogin = () => {
   const navigate = useNavigate();
@@ -25,7 +26,7 @@ const AdminLogin = () => {
   React.useEffect(() => {
     const checkConnection = async () => {
       try {
-        const response = await fetch('http://localhost:3001/health');
+        const response = await fetch(getApiUrl('/health'));
         if (response.ok) {
           setConnectionStatus('connected');
         } else {

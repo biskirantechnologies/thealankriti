@@ -11,6 +11,7 @@ import {
 import { Helmet } from 'react-helmet-async';
 import { useCart } from '../contexts/CartContext';
 import api from '../services/api';
+import { getImageUrl } from '../utils/api';
 
 const HomePage = () => {
   const [featuredProducts, setFeaturedProducts] = useState([]);
@@ -18,21 +19,16 @@ const HomePage = () => {
   const [loading, setLoading] = useState(true);
   const { addItem } = useCart();
 
-  // Helper function to get proper image URL
-  const getImageUrl = (image) => {
+  // Helper function to get proper image URL (using imported utility)
+  const getImageUrlForProduct = (image) => {
     if (!image) return '/api/placeholder/400/400';
     
     if (typeof image === 'string') {
-      // If it's a string, it could be a full URL or a path
-      if (image.startsWith('http')) return image;
-      if (image.startsWith('/uploads')) return `http://localhost:3001${image}`;
-      return image;
+      return getImageUrl(image);
     }
     
     if (typeof image === 'object' && image.url) {
-      if (image.url.startsWith('http')) return image.url;
-      if (image.url.startsWith('/uploads')) return `http://localhost:3001${image.url}`;
-      return image.url;
+      return getImageUrl(image.url);
     }
     
     return '/api/placeholder/400/400';
