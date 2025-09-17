@@ -15,3 +15,12 @@ services:
         value: The Alankriti-jewells-super-secret-key-2024
       - key: PORT
         value: 10000
+
+  - type: static
+    name: thealankriti-frontend
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    staticPublishPath: build
+    envVars:
+      - key: REACT_APP_API_URL
+        value: https://thealankriti-backendd.onrender.com/api
