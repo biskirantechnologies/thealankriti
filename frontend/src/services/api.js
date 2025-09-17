@@ -45,14 +45,33 @@ api.interceptors.response.use(
     }
     
     if (response?.status === 401) {
-      // Unauthorized - clear token and redirect to login
+      // Check if it's a token expired error
+      const errorMessage = response?.data?.message || '';
+      const isTokenExpired = errorMessage.includes('Token expired') || errorMessage.includes('expired');
+      
+      // Unauthorized - clear token and redirect to appropriate login
       Cookies.remove('token');
       localStorage.removeItem('user');
+      localStorage.removeItem('authState');
       
-      // Only show toast if not already on login page
-      if (!window.location.pathname.includes('/login')) {
-        toast.error('Your session has expired. Please login again.');
-        window.location.href = '/login';
+      // Determine redirect based on current path
+      const currentPath = window.location.pathname;
+      const isAdminPath = currentPath.includes('/admin');
+      
+      // Only show toast and redirect if not already on login page
+      if (!currentPath.includes('/login') && !currentPath.includes('/admin-login')) {
+        if (isTokenExpired) {
+          toast.error('Your session has expired. Please login again.');
+        } else {
+          toast.error('Authentication required. Please login.');
+        }
+        
+        // Redirect to appropriate login page
+        if (isAdminPath) {
+          window.location.href = '/#/admin-login';
+        } else {
+          window.location.href = '/#/login';
+        }
       }
     } else if (response?.status === 403) {
       toast.error('You do not have permission to perform this action.');
@@ -71,6 +90,7 @@ export const authAPI = {
   adminLogin: (credentials) => api.post('/auth/admin-login', credentials),
   getCurrentUser: () => api.get('/auth/me'),
   updateProfile: (userData) => api.put('/auth/profile', userData),
+  refreshToken: (refreshToken) => api.post('/auth/refresh', { refreshToken }),
 };
 
 // Products API
@@ -183,11 +203,52 @@ export const handleAPIError = (error, defaultMessage = 'Something went wrong') =
 
 export const setAuthToken = (token) => {
   if (token) {
-    Cookies.set('token', token, { expires: 7, secure: process.env.NODE_ENV === 'production' });
+    // Set cookie with extended expiration and secure settings
+    const cookieOptions = { 
+      expires: 30, // 30 days instead of 7
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'Lax' // Better security
+    };
+    Cookies.set('token', token, cookieOptions);
     api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    
+    // Also store in localStorage as backup
+    localStorage.setItem('authToken', token);
+    localStorage.setItem('tokenSetTime', new Date().getTime().toString());
   } else {
     Cookies.remove('token');
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('tokenSetTime');
+    localStorage.removeItem('authState');
     delete api.defaults.headers.common['Authorization'];
+  }
+};
+
+// Add token validation helper
+export const isTokenValid = () => {
+  const token = Cookies.get('token') || localStorage.getItem('authToken');
+  const tokenSetTime = localStorage.getItem('tokenSetTime');
+  
+  if (!token || !tokenSetTime) return false;
+  
+  // Check if token is older than 7 days (original JWT expiration)
+  const tokenAge = new Date().getTime() - parseInt(tokenSetTime);
+  const sevenDaysInMs = 7 * 24 * 60 * 60 * 1000;
+  
+  return tokenAge < sevenDaysInMs;
+};
+
+// Add token refresh helper
+export const refreshAuthState = () => {
+  const token = Cookies.get('token') || localStorage.getItem('authToken');
+  
+  if (token && isTokenValid()) {
+    api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    return token;
+  } else {
+    // Clear invalid token
+    setAuthToken(null);
+    return null;
   }
 };
 

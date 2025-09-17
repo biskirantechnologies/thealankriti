@@ -15,11 +15,21 @@ const auth = async (req, res, next) => {
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    
+    // Reject refresh tokens in regular auth
+    if (decoded.type === 'refresh') {
+      return res.status(401).json({ message: 'Invalid token type.' });
+    }
+    
     const user = await User.findById(decoded.id).select('-password');
     
     if (!user || !user.isActive) {
       return res.status(401).json({ message: 'Invalid token or user not found.' });
     }
+
+    // Update user's last activity
+    user.lastActivity = new Date();
+    await user.save();
 
     req.user = user;
     next();
@@ -29,7 +39,7 @@ const auth = async (req, res, next) => {
       return res.status(401).json({ message: 'Invalid token format.' });
     }
     if (error.name === 'TokenExpiredError') {
-      return res.status(401).json({ message: 'Token expired.' });
+      return res.status(401).json({ message: 'Token expired. Please login again.' });
     }
     return res.status(401).json({ message: 'Invalid token.' });
   }
@@ -64,8 +74,15 @@ const adminAuth = async (req, res, next) => {
 
 const generateToken = (userId) => {
   return jwt.sign({ id: userId }, process.env.JWT_SECRET, {
-    expiresIn: '7d'
+    expiresIn: '30d' // Extended to 30 days for better user experience
   });
 };
 
-module.exports = { auth, adminAuth, generateToken };
+// Generate refresh token (longer expiration)
+const generateRefreshToken = (userId) => {
+  return jwt.sign({ id: userId, type: 'refresh' }, process.env.JWT_SECRET, {
+    expiresIn: '90d' // 90 days for refresh token
+  });
+};
+
+module.exports = { auth, adminAuth, generateToken, generateRefreshToken };

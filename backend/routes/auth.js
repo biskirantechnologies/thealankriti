@@ -1,7 +1,8 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 const User = require('../models/User');
-const { generateToken } = require('../middleware/auth');
+const { generateToken, generateRefreshToken } = require('../middleware/auth');
 const { validateRegistration, validateLogin } = require('../middleware/validation');
 
 const router = express.Router();
@@ -30,12 +31,14 @@ router.post('/register', validateRegistration, async (req, res) => {
 
     await user.save();
 
-    // Generate JWT token
+    // Generate JWT tokens
     const token = generateToken(user._id);
+    const refreshToken = generateRefreshToken(user._id);
 
     res.status(201).json({
       message: 'User registered successfully',
       token,
+      refreshToken,
       user: {
         id: user._id,
         email: user.email,
@@ -121,12 +124,14 @@ router.post('/login', validateLogin, async (req, res) => {
     // Save all user data to database
     await user.save();
 
-    // Generate JWT token
+    // Generate JWT tokens
     const token = generateToken(user._id);
+    const refreshToken = generateRefreshToken(user._id);
 
     res.json({
       message: 'Login successful',
       token,
+      refreshToken,
       user: {
         id: user._id,
         email: user.email,
@@ -165,12 +170,14 @@ router.post('/admin-login', validateLogin, async (req, res) => {
         await adminUser.save();
       }
 
-      // Generate JWT token
+      // Generate JWT tokens
       const token = generateToken(adminUser._id);
+      const refreshToken = generateRefreshToken(adminUser._id);
 
       return res.json({
         message: 'Admin login successful',
         token,
+        refreshToken,
         user: {
           id: adminUser._id,
           email: adminUser.email,
@@ -197,12 +204,14 @@ router.post('/admin-login', validateLogin, async (req, res) => {
     user.lastLogin = new Date();
     await user.save();
 
-    // Generate JWT token
+    // Generate JWT tokens
     const token = generateToken(user._id);
+    const refreshToken = generateRefreshToken(user._id);
 
     res.json({
       message: 'Admin login successful',
       token,
+      refreshToken,
       user: {
         id: user._id,
         email: user.email,
@@ -238,6 +247,55 @@ router.get('/me', require('../middleware/auth').auth, async (req, res) => {
   } catch (error) {
     console.error('Get user error:', error);
     res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// @route   POST /api/auth/refresh
+// @desc    Refresh access token using refresh token
+// @access  Public
+router.post('/refresh', async (req, res) => {
+  try {
+    const { refreshToken } = req.body;
+    
+    if (!refreshToken) {
+      return res.status(401).json({ message: 'Refresh token required' });
+    }
+
+    // Verify refresh token
+    const decoded = jwt.verify(refreshToken, process.env.JWT_SECRET);
+    
+    if (decoded.type !== 'refresh') {
+      return res.status(401).json({ message: 'Invalid token type' });
+    }
+
+    // Find user
+    const user = await User.findById(decoded.id).select('-password');
+    if (!user || !user.isActive) {
+      return res.status(401).json({ message: 'User not found or inactive' });
+    }
+
+    // Generate new tokens
+    const newToken = generateToken(user._id);
+    const newRefreshToken = generateRefreshToken(user._id);
+
+    res.json({
+      message: 'Tokens refreshed successfully',
+      token: newToken,
+      refreshToken: newRefreshToken,
+      user: {
+        id: user._id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        role: user.role
+      }
+    });
+  } catch (error) {
+    console.error('Token refresh error:', error);
+    if (error.name === 'JsonWebTokenError' || error.name === 'TokenExpiredError') {
+      return res.status(401).json({ message: 'Invalid or expired refresh token' });
+    }
+    res.status(500).json({ message: 'Server error during token refresh' });
   }
 });
 

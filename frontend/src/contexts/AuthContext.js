@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
-import { authAPI, setAuthToken } from '../services/api';
+import { authAPI, setAuthToken, isTokenValid, refreshAuthState } from '../services/api';
 import userDataService from '../services/userDataService';
 import Cookies from 'js-cookie';
 
@@ -95,32 +95,70 @@ const AuthContext = createContext();
 export const AuthProvider = ({ children }) => {
   const [state, dispatch] = useReducer(authReducer, initialState);
 
-  // Load user on app start
+  // Load user on app start with improved token handling
   useEffect(() => {
     const loadUser = async () => {
-      const token = Cookies.get('token');
+      console.log('🔄 AuthContext: Loading user on app start...');
       
-      if (token) {
+      // Try to refresh auth state first
+      const token = refreshAuthState();
+      
+      if (token && isTokenValid()) {
         dispatch({ type: AuthActionTypes.LOAD_USER_START });
-        setAuthToken(token);
+        console.log('🎫 Valid token found, loading user...');
         
         try {
           const response = await authAPI.getCurrentUser();
+          console.log('✅ User loaded successfully:', response.data.user);
+          
+          // Store auth state for persistence
+          localStorage.setItem('authState', JSON.stringify({
+            user: response.data.user,
+            loginTime: new Date().getTime()
+          }));
+          
           dispatch({
             type: AuthActionTypes.LOAD_USER_SUCCESS,
             payload: response.data.user,
           });
         } catch (error) {
-          console.error('Failed to load user:', error);
-          // Clear invalid token
-          Cookies.remove('token');
+          console.error('❌ Failed to load user:', error);
+          console.log('🧹 Clearing invalid authentication...');
+          
+          // Clear all auth data
           setAuthToken(null);
           dispatch({
             type: AuthActionTypes.LOAD_USER_FAILURE,
-            payload: 'Failed to authenticate user',
+            payload: 'Session expired. Please login again.',
           });
         }
       } else {
+        console.log('🚫 No valid token found');
+        // Try to restore from localStorage if available
+        const savedAuthState = localStorage.getItem('authState');
+        
+        if (savedAuthState) {
+          try {
+            const authData = JSON.parse(savedAuthState);
+            const loginTime = authData.loginTime;
+            const currentTime = new Date().getTime();
+            const timeDiff = currentTime - loginTime;
+            
+            // If login was within last 30 days, try to restore session
+            if (timeDiff < (30 * 24 * 60 * 60 * 1000)) {
+              console.log('🔄 Attempting to restore session from localStorage...');
+              
+              dispatch({
+                type: AuthActionTypes.LOAD_USER_SUCCESS,
+                payload: authData.user,
+              });
+              return;
+            }
+          } catch (e) {
+            console.error('Error parsing saved auth state:', e);
+          }
+        }
+        
         dispatch({
           type: AuthActionTypes.LOAD_USER_FAILURE,
           payload: null,
@@ -129,9 +167,21 @@ export const AuthProvider = ({ children }) => {
     };
 
     loadUser();
+    
+    // Set up periodic token validation (every 5 minutes)
+    const tokenCheckInterval = setInterval(() => {
+      const currentToken = Cookies.get('token') || localStorage.getItem('authToken');
+      if (currentToken && !isTokenValid()) {
+        console.log('⏰ Token expired, clearing session...');
+        setAuthToken(null);
+        dispatch({ type: AuthActionTypes.LOGOUT });
+      }
+    }, 5 * 60 * 1000); // 5 minutes
+    
+    return () => clearInterval(tokenCheckInterval);
   }, []);
 
-  // Login function
+  // Enhanced login function with better session management
   const login = async (credentials, isAdmin = false) => {
     console.log(`🔑 AuthContext login started - isAdmin: ${isAdmin}`);
     dispatch({ type: AuthActionTypes.LOGIN_START });
@@ -147,15 +197,25 @@ export const AuthProvider = ({ children }) => {
       console.log('👤 User data:', user);
       console.log('🎫 Token received:', token ? 'YES' : 'NO');
       
-      // Store token
+      // Store token with enhanced persistence
       setAuthToken(token);
+      
+      // Store comprehensive auth state
+      const authState = {
+        user,
+        loginTime: new Date().getTime(),
+        isAdmin,
+        userAgent: navigator.userAgent,
+        sessionId: Math.random().toString(36).substr(2, 9)
+      };
+      localStorage.setItem('authState', JSON.stringify(authState));
       
       dispatch({
         type: AuthActionTypes.LOGIN_SUCCESS,
         payload: { user, token },
       });
       
-      console.log('✅ Auth context updated successfully');
+      console.log('✅ Auth context updated successfully with enhanced session');
       
       // Initialize user data tracking after successful login
       try {
@@ -233,15 +293,26 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Logout function
+  // Enhanced logout function
   const logout = () => {
-    // Clear token
+    console.log('🚪 Logging out user...');
+    
+    // Clear all authentication data
     setAuthToken(null);
     
-    // Clear user data from localStorage if any
+    // Clear all stored data
     localStorage.removeItem('user');
+    localStorage.removeItem('authState');
+    
+    // Clear user tracking session
+    try {
+      userDataService.clearSession();
+    } catch (error) {
+      console.error('Error clearing user session:', error);
+    }
     
     dispatch({ type: AuthActionTypes.LOGOUT });
+    console.log('✅ Logout completed');
   };
 
   // Update profile function

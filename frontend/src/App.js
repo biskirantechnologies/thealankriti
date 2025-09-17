@@ -5,6 +5,7 @@ import { Toaster } from 'react-hot-toast';
 
 import Layout from './components/Layout/Layout';
 import { useAuth } from './contexts/AuthContext';
+import SessionManager from './components/SessionManager';
 
 // Simple components for missing imports
 const LoadingSpinner = () => (
@@ -147,6 +148,7 @@ function App() {
         </Routes>
       </Suspense>
       <Toaster position="top-right" />
+      <SessionManager />
     </>
   );
 }
