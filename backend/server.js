@@ -1,11 +1,5 @@
 const express = require('express');
-const co        'https://thealankriti-frontend.onrender.com',
-        'https://thealankriti.onrender.com',
-        'https://www.thealankriti.com',
-        'https://thealankriti.com',
-        // Add potential variations
-        'https://thealankriti-frontend-*.onrender.com',
-        'https://thealankriti-*.onrender.com' require('cors');
+const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const compression = require('compression');
@@ -30,6 +24,11 @@ const app = express();
 
 // Connect to MongoDB
 connectDB();
+
+// Start keepalive service for production
+if (process.env.NODE_ENV === 'production') {
+  require('./keepalive');
+}
 
 // Security middleware
 app.use(helmet());
@@ -91,7 +90,11 @@ app.get('/health', (req, res) => {
   res.status(200).json({ 
     status: 'OK', 
     timestamp: new Date().toISOString(),
-    service: 'Ukriti Jewells API'
+    service: 'Ukriti Jewells API',
+    environment: process.env.NODE_ENV || 'development',
+    port: process.env.PORT || 5000,
+    uptime: Math.floor(process.uptime()),
+    memory: Math.round(process.memoryUsage().rss / 1024 / 1024) + 'MB'
   });
 });
 
@@ -125,10 +128,28 @@ app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Ukriti Jewells API server running on port ${PORT}`);
   console.log(`📍 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`🔗 Health check: http://localhost:${PORT}/health`);
+  console.log(`🌐 Server listening on all interfaces (0.0.0.0:${PORT})`);
+});
+
+// Graceful shutdown
+process.on('SIGTERM', () => {
+  console.log('👋 SIGTERM received, shutting down gracefully');
+  server.close(() => {
+    console.log('✅ Server closed');
+    process.exit(0);
+  });
+});
+
+process.on('SIGINT', () => {
+  console.log('👋 SIGINT received, shutting down gracefully');
+  server.close(() => {
+    console.log('✅ Server closed');
+    process.exit(0);
+  });
 });
 
 module.exports = app;
