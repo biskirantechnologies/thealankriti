@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# Ukriti Jewells Startup Script
-echo "🚀 Starting Ukriti Jewells Development Environment..."
+# TheAlankriti Startup Script
+echo "🚀 Starting TheAlankriti Development Environment..."
 
 # Colors for output
 GREEN='\033[0;32m'
@@ -61,8 +61,8 @@ echo -e "${GREEN}✅ MongoDB is running${NC}"
 # Start Backend in screen session if not running
 if ! check_port 3001; then
     echo -e "${BLUE}🔧 Starting Backend Server...${NC}"
-    screen -dmS ukriti-backend bash -c "cd backend && npm start > ../logs/backend.log 2>&1"
-    echo -e "${GREEN}✅ Backend started in screen session 'ukriti-backend'${NC}"
+    screen -dmS thealankriti-backend bash -c "cd backend && npm start > ../logs/backend.log 2>&1"
+    echo -e "${GREEN}✅ Backend started in screen session 'thealankriti-backend'${NC}"
     
     # Wait for backend to be ready
     echo -e "${YELLOW}⏳ Waiting for backend to be ready...${NC}"
@@ -83,8 +83,8 @@ fi
 # Start Frontend in screen session if not running
 if ! check_port 3000; then
     echo -e "${BLUE}🎨 Starting Frontend Server...${NC}"
-    screen -dmS ukriti-frontend bash -c "cd frontend && npm start > ../logs/frontend.log 2>&1"
-    echo -e "${GREEN}✅ Frontend started in screen session 'ukriti-frontend'${NC}"
+    screen -dmS thealankriti-frontend bash -c "cd frontend && npm start > ../logs/frontend.log 2>&1"
+    echo -e "${GREEN}✅ Frontend started in screen session 'thealankriti-frontend'${NC}"
     
     # Wait for frontend to be ready
     echo -e "${YELLOW}⏳ Waiting for frontend to be ready...${NC}"
@@ -103,7 +103,7 @@ else
 fi
 
 echo ""
-echo -e "${GREEN}🎉 Ukriti Jewells is now running!${NC}"
+echo -e "${GREEN}🎉 TheAlankriti is now running!${NC}"
 echo -e "${BLUE}📱 Frontend: http://localhost:3000${NC}"
 echo -e "${BLUE}🔧 Backend:  http://localhost:3001${NC}"  
 echo -e "${BLUE}💾 Admin:    http://localhost:3000/admin${NC}"
@@ -111,8 +111,8 @@ echo ""
 echo -e "${YELLOW}📋 Useful Commands:${NC}"
 echo "  - View backend logs: tail -f logs/backend.log"
 echo "  - View frontend logs: tail -f logs/frontend.log"
-echo "  - View backend session: screen -r ukriti-backend"
-echo "  - View frontend session: screen -r ukriti-frontend"
+echo "  - View backend session: screen -r thealankriti-backend"
+echo "  - View frontend session: screen -r thealankriti-frontend"
 echo "  - Stop all: ./stop.sh"
 echo ""
 echo -e "${GREEN}✨ Happy coding!${NC}"

@@ -61,7 +61,7 @@ const Contact = () => {
     {
       icon: EnvelopeIcon,
       title: 'Email',
-      details: ['ukritijwelles@gmail.com'],
+      details: ['thealankriti@gmail.com'],
       description: 'Send us your queries anytime'
     },
     {
@@ -365,7 +365,7 @@ const Contact = () => {
               <div className="bg-white p-8 rounded-2xl shadow-lg">
                 <MapPinIcon className="h-12 w-12 text-amber-500 mx-auto mb-4" />
                 <h4 className="text-xl font-bold text-gray-800 mb-2">Store Locator</h4>
-                <p className="text-gray-600">Find the nearest Ukriti Jewells store</p>
+                <p className="text-gray-600">Find the nearest TheAlankriti store</p>
               </div>
             </div>
           </motion.div>

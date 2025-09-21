@@ -150,8 +150,8 @@ const AdminLogin = () => {
   return (
     <>
       <Helmet>
-        <title>Admin Login - Ukriti Jewells</title>
-        <meta name="description" content="Secure admin access to Ukriti Jewells management system" />
+        <title>Admin Login - TheAlankriti</title>
+        <meta name="description" content="Secure admin access to TheAlankriti management system" />
         <meta name="robots" content="noindex, nofollow" />
       </Helmet>
 
@@ -203,7 +203,7 @@ const AdminLogin = () => {
                     autoComplete="email"
                     required
                     className="appearance-none relative block w-full px-3 py-3 border border-gray-600 bg-gray-700/50 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder-gray-400 transition-all duration-200"
-                    placeholder="admin@ukritijewells.com"
+                    placeholder="admin@thealankriti.com"
                     value={formData.email}
                     onChange={handleChange}
                   />

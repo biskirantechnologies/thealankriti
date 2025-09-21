@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { 
@@ -10,7 +10,7 @@ import {
   CalendarIcon
 } from '@heroicons/react/24/outline';
 import { Helmet } from 'react-helmet-async';
-import { userAPI } from '../services/api';
+import { ordersAPI } from '../services/api';
 import { getImageWithFallback } from '../utils/api';
 import toast from 'react-hot-toast';
 
@@ -108,8 +108,8 @@ const TrackOrder = () => {
   return (
     <>
       <Helmet>
-        <title>Track Your Order - Ukriti Jewells</title>
-        <meta name="description" content="Track your jewelry order with Ukriti Jewells. Get real-time updates on your order status and delivery information." />
+        <title>Track Your Order - TheAlankriti</title>
+        <meta name="description" content="Track your jewelry order with TheAlankriti. Get real-time updates on your order status and delivery information." />
       </Helmet>
 
       <div className="min-h-screen bg-gray-50 py-12">
@@ -173,7 +173,7 @@ const TrackOrder = () => {
                     +91-XXXXX-XXXXX
                   </span>
                   <span>|</span>
-                  <span>support@ukritijewells.com</span>
+                  <span>support@thealankriti.com</span>
                 </div>
               </div>
             </motion.div>
@@ -412,7 +412,7 @@ const TrackOrder = () => {
                   </div>
                   <div className="hidden sm:block text-white/60">|</div>
                   <div>
-                    <span>support@ukritijewells.com</span>
+                    <span>support@thealankriti.com</span>
                   </div>
                 </div>
               </div>

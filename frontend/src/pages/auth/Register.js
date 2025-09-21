@@ -124,7 +124,7 @@ const Register = () => {
             Create Account
           </h2>
           <p className="text-gray-600">
-            Join the Ukriti Jewells family
+            Join the TheAlankriti family
           </p>
         </motion.div>
       </div>

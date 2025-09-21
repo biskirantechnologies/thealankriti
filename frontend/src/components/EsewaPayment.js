@@ -9,7 +9,7 @@ const EsewaPayment = ({ amount, orderId, onPaymentComplete, onPaymentFailed }) =
   const [timeLeft, setTimeLeft] = useState(300); // 5 minutes
 
   const esewaId = '9765723517';
-  const storeName = 'Ukriti Jewells';
+  const storeName = 'TheAlankriti';
 
   useEffect(() => {
     generateQRCode();
@@ -218,7 +218,7 @@ const EsewaPayment = ({ amount, orderId, onPaymentComplete, onPaymentFailed }) =
       {/* Support */}
       <div className="mt-6 p-3 bg-blue-50 border border-blue-200 rounded-lg">
         <p className="text-xs text-blue-700 text-center">
-          Need help? Contact us at 9765723517 or support@ukritijewells.com
+          Need help? Contact us at 9765723517 or support@thealankriti.com
         </p>
       </div>
     </div>

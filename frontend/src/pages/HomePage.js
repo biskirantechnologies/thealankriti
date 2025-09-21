@@ -155,8 +155,8 @@ const HomePage = () => {
   return (
     <>
       <Helmet>
-        <title>Ukriti Jewells - Exquisite Handcrafted Jewelry Collection</title>
-        <meta name="description" content="Discover stunning handcrafted jewelry at Ukriti Jewells. Premium rings, necklaces, earrings, and bracelets made with finest materials and attention to detail." />
+        <title>TheAlankriti - Exquisite Handcrafted Jewelry Collection</title>
+        <meta name="description" content="Discover stunning handcrafted jewelry at TheAlankriti. Premium rings, necklaces, earrings, and bracelets made with finest materials and attention to detail." />
         <meta name="keywords" content="jewelry, handcrafted, rings, necklaces, earrings, bracelets, gold, silver, diamond, precious stones" />
       </Helmet>
       

@@ -1,4 +1,4 @@
-# Ukriti Jewells - Complete E-commerce Platform
+# TheAlankriti - Complete E-commerce Platform
 
 A comprehensive, production-ready e-commerce platform for a jewelry store featuring a React frontend, Node.js/Express backend, QR code payments, automated invoicing, and complete admin management system.
 
@@ -57,7 +57,7 @@ A comprehensive, production-ready e-commerce platform for a jewelry store featur
 1. **Clone the repository**
    ```bash
    git clone <repository-url>
-   cd ukriti-jewells
+   cd thealankriti
    ```
 
 2. **Backend Setup**
@@ -85,7 +85,7 @@ A comprehensive, production-ready e-commerce platform for a jewelry store featur
 ## 📋 Project Structure
 
 ```
-ukriti-jewells/
+thealankriti/
 ├── backend/                 # Node.js API server
 │   ├── config/             # Database configuration
 │   ├── middleware/         # Auth, validation, error handling
@@ -114,7 +114,7 @@ ukriti-jewells/
 **Backend (.env)**
 ```env
 # Database
-MONGODB_URI=mongodb://localhost:27017/ukriti_jewells
+MONGODB_URI=mongodb://localhost:27017/thealankriti
 
 # JWT Secret
 JWT_SECRET=your_super_secure_jwt_secret
@@ -123,7 +123,7 @@ JWT_SECRET=your_super_secure_jwt_secret
 EMAIL_SERVICE=gmail
 EMAIL_USER=your_email@gmail.com
 EMAIL_PASS=your_app_password
-STORE_EMAIL=store@ukritijewells.com
+STORE_EMAIL=store@thealankriti.com
 
 # WhatsApp/Twilio
 TWILIO_ACCOUNT_SID=your_twilio_sid
@@ -132,18 +132,18 @@ TWILIO_WHATSAPP_NUMBER=whatsapp:+14155238886
 STORE_WHATSAPP_NUMBER=whatsapp:+1234567890
 
 # Payment
-UPI_ID=ukritijewells@paytm
-STORE_NAME=Ukriti Jewells
+UPI_ID=thealankriti@paytm
+STORE_NAME=TheAlankriti
 
 # Admin Credentials
-ADMIN_EMAIL=admin@ukritijewells.com
+ADMIN_EMAIL=admin@thealankriti.com
 ADMIN_PASSWORD=admin123
 ```
 
 **Frontend (.env)**
 ```env
 REACT_APP_API_URL=http://localhost:5000/api
-REACT_APP_STORE_NAME=Ukriti Jewells
+REACT_APP_STORE_NAME=TheAlankriti
 ```
 
 ## 🎯 Key Features Implementation
@@ -198,7 +198,7 @@ curl http://localhost:5000/api/products
 # Test admin login
 curl -X POST http://localhost:5000/api/auth/admin-login \
   -H "Content-Type: application/json" \
-  -d '{"email":"admin@ukritijewells.com","password":"admin123"}'
+  -d '{"email":"admin@thealankriti.com","password":"admin123"}'
 ```
 
 ## 🚀 Deployment
@@ -208,7 +208,7 @@ curl -X POST http://localhost:5000/api/auth/admin-login \
 **Heroku**
 ```bash
 cd backend
-heroku create ukriti-jewells-api
+heroku create thealankriti-api
 heroku config:set NODE_ENV=production
 heroku config:set MONGODB_URI=your_production_db_url
 # Set other environment variables
@@ -354,7 +354,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## 📞 Support
 
 For support and questions:
-- **Email**: support@ukritijewells.com
+- **Email**: support@thealankriti.com
 - **Documentation**: Check individual README files in backend and frontend folders
 - **Issues**: Create GitHub issues for bugs and feature requests
 
@@ -367,6 +367,6 @@ For support and questions:
 
 ---
 
-**Ukriti Jewells E-commerce Platform** - Built with ❤️ for seamless jewelry shopping experience.
+**TheAlankriti E-commerce Platform** - Built with ❤️ for seamless jewelry shopping experience.
 
 *Ready for production deployment with comprehensive features for both customers and administrators.*

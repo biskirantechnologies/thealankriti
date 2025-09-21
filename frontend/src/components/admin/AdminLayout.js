@@ -66,7 +66,7 @@ const AdminLayout = ({ children }) => {
           {/* Mobile header */}
           <div className="flex items-center justify-between h-16 px-4 bg-gold">
             <Link to="/admin" className="text-white text-xl font-bold">
-              UKRITI ADMIN
+              THEALANKRITI ADMIN
             </Link>
             <button
               onClick={() => setSidebarOpen(false)}
@@ -142,7 +142,7 @@ const AdminLayout = ({ children }) => {
           {/* Logo */}
           <div className="flex items-center justify-center h-16 px-4 bg-gold">
             <Link to="/admin" className="text-white text-xl font-bold">
-              UKRITI ADMIN
+              THEALANKRITI ADMIN
             </Link>
           </div>
 

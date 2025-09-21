@@ -19,7 +19,7 @@ const sendOrderConfirmationEmail = async (order, invoicePath) => {
     const transporter = createTransporter();
     
     const mailOptions = {
-      from: `"${process.env.STORE_NAME || 'Ukriti Jewells'}" <${process.env.EMAIL_USER}>`,
+      from: `"${process.env.STORE_NAME || 'TheAlankriti'}" <${process.env.EMAIL_USER}>`,
       to: order.customerInfo.email,
       subject: `Order Confirmation - ${order.orderNumber}`,
       html: generateOrderConfirmationHTML(order),
@@ -44,7 +44,7 @@ const sendOrderNotificationToAdmin = async (order) => {
     const transporter = createTransporter();
     
     const mailOptions = {
-      from: `"${process.env.STORE_NAME || 'Ukriti Jewells'}" <${process.env.EMAIL_USER}>`,
+      from: `"${process.env.STORE_NAME || 'TheAlankriti'}" <${process.env.EMAIL_USER}>`,
       to: process.env.STORE_EMAIL,
       subject: `🔔 New Order Received - ${order.orderNumber}`,
       html: generateAdminOrderNotificationHTML(order)
@@ -92,7 +92,7 @@ const generateOrderConfirmationHTML = (order) => {
         
         <!-- Header -->
         <div style="background: linear-gradient(135deg, #d4af37, #ffd700); padding: 40px 30px; text-align: center;">
-          <h1 style="color: white; margin: 0; font-size: 32px; font-weight: 300; text-shadow: 0 2px 4px rgba(0,0,0,0.3);">${process.env.STORE_NAME || 'Ukriti Jewells'}</h1>
+          <h1 style="color: white; margin: 0; font-size: 32px; font-weight: 300; text-shadow: 0 2px 4px rgba(0,0,0,0.3);">${process.env.STORE_NAME || 'TheAlankriti'}</h1>
           <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0; font-size: 16px;">Exquisite Jewelry Collection</p>
         </div>
 
@@ -194,7 +194,7 @@ const generateOrderConfirmationHTML = (order) => {
 
         <!-- Footer -->
         <div style="background-color: #333; padding: 30px; text-align: center;">
-          <p style="color: #ccc; margin: 0 0 10px 0; font-size: 14px;">Thank you for choosing ${process.env.STORE_NAME || 'Ukriti Jewells'}</p>
+          <p style="color: #ccc; margin: 0 0 10px 0; font-size: 14px;">Thank you for choosing ${process.env.STORE_NAME || 'TheAlankriti'}</p>
           <p style="color: #999; margin: 0; font-size: 12px;">If you have any questions, please contact us at ${process.env.STORE_EMAIL}</p>
         </div>
 

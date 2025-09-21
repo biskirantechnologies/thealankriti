@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "name": "ukriti-jewells",
+  "name": "thealankriti",
   "builds": [
     {
       "src": "frontend/package.json",

@@ -391,8 +391,8 @@ const AdminProductManager = () => {
   return (
     <>
       <Helmet>
-        <title>Product Management - Admin Panel | Ukriti Jewells</title>
-        <meta name="description" content="Manage jewelry products, inventory, and pricing for Ukriti Jewells" />
+        <title>Product Management - Admin Panel | TheAlankriti</title>
+        <meta name="description" content="Manage jewelry products, inventory, and pricing for TheAlankriti" />
       </Helmet>
 
       <div className="min-h-screen bg-gray-50">

@@ -51,7 +51,7 @@ const Header = () => {
             to="/" 
             className="text-2xl font-light text-gray-900 hover:text-gray-700 transition-colors tracking-wide"
           >
-            UKRITI
+            THEALANKRITI
           </Link>
 
           {/* Desktop Navigation */}

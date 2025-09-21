@@ -198,7 +198,7 @@ const Products = () => {
   return (
     <>
       <Helmet>
-        <title>{`${filters.search ? `Search: ${filters.search}` : 'Products'} - Ukriti Jewells`}</title>
+        <title>{`${filters.search ? `Search: ${filters.search}` : 'Products'} - TheAlankriti`}</title>
         <meta name="description" content={`Browse our collection of ${totalProducts} exquisite jewelry pieces. Find rings, necklaces, earrings, and more.`} />
       </Helmet>
       

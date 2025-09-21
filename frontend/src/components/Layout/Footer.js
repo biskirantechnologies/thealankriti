@@ -77,7 +77,7 @@ const Footer = () => {
               to="/" 
               className="text-2xl font-bold text-amber-400 mb-4 block"
             >
-              Ukriti Jewells
+              TheAlankriti
             </Link>
             <p className="text-gray-300 mb-6 leading-relaxed">
               Crafting beautiful jewelry for over two decades. We specialize in 
@@ -92,7 +92,7 @@ const Footer = () => {
               </div>
               <div className="flex items-center">
                 <EnvelopeIcon className="h-5 w-5 text-amber-400 mr-3" />
-                <span>ukritijwelles@gmail.com</span>
+                <span>thealankriti@gmail.com</span>
               </div>
               <div className="flex items-start">
                 <MapPinIcon className="h-5 w-5 text-amber-400 mr-3 mt-1 flex-shrink-0" />
@@ -237,7 +237,7 @@ const Footer = () => {
         <div className="border-t border-gray-700 mt-8 pt-6">
           <div className="flex flex-col md:flex-row justify-between items-center text-sm text-gray-400">
             <p>
-              © {currentYear} Ukriti Jewells. All rights reserved.
+              © {currentYear} TheAlankriti. All rights reserved.
             </p>
             <div className="flex space-x-4 mt-2 md:mt-0">
               {policies.map((policy) => (

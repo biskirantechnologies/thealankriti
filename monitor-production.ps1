@@ -1,10 +1,10 @@
-# Production Health Monitor for Ukriti Jewells (PowerShell Version)
+# Production Health Monitor for TheAlankriti (PowerShell Version)
 # Usage: .\monitor-production.ps1
 
-Write-Host "🔍 UKRITI JEWELLS PRODUCTION HEALTH CHECK" -ForegroundColor Green
+Write-Host "🔍 THEALANKRITI PRODUCTION HEALTH CHECK" -ForegroundColor Green
 Write-Host "=======================================" -ForegroundColor Yellow
 
-$BackendUrl = "https://thealankriti-backendd.onrender.com"
+$BackendUrl = "https://thealankriti-backend.onrender.com"
 $FrontendUrl = "https://thealankriti-frontend.onrender.com"
 
 # Backend Health Check

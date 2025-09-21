@@ -234,8 +234,8 @@ const AdminCustomerManager = () => {
   return (
     <>
       <Helmet>
-        <title>Customer Management - Admin Panel | Ukriti Jewells</title>
-        <meta name="description" content="Manage customers and track customer analytics for Ukriti Jewells" />
+        <title>Customer Management - Admin Panel | TheAlankriti</title>
+        <meta name="description" content="Manage customers and track customer analytics for TheAlankriti" />
       </Helmet>
 
       <div className="min-h-screen bg-gray-50">

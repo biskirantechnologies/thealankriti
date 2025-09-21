@@ -1,7 +1,7 @@
 {
-  "name": "ukriti-jewells-backend",
+  "name": "thealankriti-backend",
   "version": "1.0.0",
-  "description": "Backend API for Ukriti Jewells jewelry store",
+  "description": "Backend API for TheAlankriti jewelry store",
   "main": "server.js",
   "scripts": {
     "build": "echo 'No build step required for backend'",
@@ -13,7 +13,7 @@
     "health": "curl -f http://localhost:${PORT:-10000}/health || exit 1"
   },
   "keywords": ["jewelry", "ecommerce", "api", "node", "express"],
-  "author": "Ukriti Jewells",
+  "author": "TheAlankriti",
   "license": "MIT",
   "dependencies": {
     "express": "^4.18.2",

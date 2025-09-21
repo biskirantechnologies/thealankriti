@@ -4,7 +4,7 @@ const getApiBaseUrl = () => {
   const envUrl = process.env.REACT_APP_API_URL;
   const defaultUrl = window.location.hostname === 'localhost' 
     ? 'http://localhost:5000/api' 
-    : 'https://thealankriti-backendd.onrender.com/api';
+    : 'https://thealankriti-backend.onrender.com/api';
   
   const baseUrl = envUrl || defaultUrl;
   const finalUrl = baseUrl.replace('/api', '');

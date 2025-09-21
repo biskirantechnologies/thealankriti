@@ -209,7 +209,7 @@ const ProductDetail = () => {
     if (navigator.share) {
       navigator.share({
         title: product.name,
-        text: `Check out this beautiful jewelry piece from Ukriti Jewells`,
+        text: `Check out this beautiful jewelry piece from TheAlankriti`,
         url: window.location.href,
       });
     } else {
@@ -272,9 +272,9 @@ const ProductDetail = () => {
   return (
     <>
       <Helmet>
-        <title>{`${product?.name || 'Product'} - Ukriti Jewells`}</title>
-        <meta name="description" content={product?.shortDescription || product?.description || 'Beautiful jewelry piece from Ukriti Jewells'} />
-        <meta property="og:title" content={`${product?.name || 'Product'} - Ukriti Jewells`} />
+        <title>{`${product?.name || 'Product'} - TheAlankriti`}</title>
+        <meta name="description" content={product?.shortDescription || product?.description || 'Beautiful jewelry piece from TheAlankriti'} />
+        <meta property="og:title" content={`${product?.name || 'Product'} - TheAlankriti`} />
         <meta property="og:description" content={product?.shortDescription || product?.description} />
         <meta property="og:image" content={getImageUrl_Product(product?.images?.[0])} />
       </Helmet>

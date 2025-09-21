@@ -99,7 +99,7 @@ const generateOrderStatusUpdateMessage = (order, newStatus) => {
 
   const emoji = statusEmojis[newStatus] || '📋';
   
-  return `${emoji} *Order Update - ${process.env.STORE_NAME || 'Ukriti Jewells'}*
+  return `${emoji} *Order Update - ${process.env.STORE_NAME || 'TheAlankriti'}*
 
 Hello ${order.customerInfo.firstName}!
 

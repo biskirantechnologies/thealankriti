@@ -1,8 +1,8 @@
 # 🚀 Render Deployment Guide
 
-## Deploy Ukriti Jewells to Render Platform
+## Deploy TheAlankriti to Render Platform
 
-This guide will help you deploy your full-stack Ukriti Jewells application to Render.
+This guide will help you deploy your full-stack TheAlankriti application to Render.
 
 ---
 
@@ -29,7 +29,7 @@ Your application is configured as:
 
 1. **Initialize Git** (if not done):
 ```bash
-cd "c:\Users\bewit\Downloads\Ukriti Jewells\thealankriti"
+cd "c:\Users\bewit\Downloads\TheAlankriti\thealankriti"
 git init
 ```
 
@@ -41,12 +41,12 @@ git commit -m "Initial commit - Ready for Render deployment"
 
 3. **Create GitHub repository**:
    - Go to [GitHub](https://github.com/new)
-   - Create repository named: `ukriti-jewells`
+   - Create repository named: `thealankriti`
    - **Don't** initialize with README (we have files already)
 
 4. **Push to GitHub**:
 ```bash
-git remote add origin https://github.com/YOUR_USERNAME/ukriti-jewells.git
+git remote add origin https://github.com/YOUR_USERNAME/thealankriti.git
 git branch -M main
 git push -u origin main
 ```
@@ -64,7 +64,7 @@ git push -u origin main
 2. **Blueprint Deployment**:
    - Select "Blueprint"
    - Connect your GitHub repository
-   - Choose the `ukriti-jewells` repository
+   - Choose the `thealankriti` repository
    - Render will detect the `render.yaml` file automatically
 
 3. **Service Configuration**:
@@ -131,12 +131,12 @@ Set these in your frontend service settings:
 
 1. **Frontend Custom Domain**:
    - Go to frontend service settings
-   - Add custom domain: `www.ukritijewells.com`
+   - Add custom domain: `www.thealankriti.com`
    - Configure DNS CNAME record
 
 2. **Backend Custom Domain**:
    - Go to backend service settings  
-   - Add custom domain: `api.ukritijewells.com`
+   - Add custom domain: `api.thealankriti.com`
    - Configure DNS CNAME record
 
 ---
@@ -270,7 +270,7 @@ curl https://your-backend-url.onrender.com/health
 
 ---
 
-🎉 **Congratulations!** Your Ukriti Jewells application is now live on Render!
+🎉 **Congratulations!** Your TheAlankriti application is now live on Render!
 
 Frontend URL: `https://thealankriti-frontend.onrender.com`
 Backend URL: `https://thealankriti-backend.onrender.com`

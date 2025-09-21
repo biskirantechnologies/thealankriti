@@ -7,7 +7,7 @@ Your website files are successfully uploaded to GitHub, but GitHub Pages needs t
 ## 🎯 **IMMEDIATE ACTION REQUIRED:**
 
 ### **Step 1: Enable GitHub Pages (CRITICAL)**
-1. **Go to**: https://github.com/eraashisjha/Ukriti-Jewells
+1. **Go to**: https://github.com/eraashisjha/TheAlankriti
 2. **Click**: "Settings" tab (top right of the page)
 3. **Scroll down**: Find "Pages" in the left sidebar
 4. **Click**: "Pages"
@@ -24,7 +24,7 @@ Your website files are successfully uploaded to GitHub, but GitHub Pages needs t
 
 ### **Step 3: Test Your Website**
 Once enabled, your website will be at:
-**https://eraashisjha.github.io/Ukriti-Jewells/**
+**https://eraashisjha.github.io/TheAlankriti/**
 
 ## 🔍 **Why This Happened:**
 - GitHub doesn't automatically enable Pages for repositories
@@ -40,13 +40,13 @@ Once enabled, your website will be at:
 
 ## 🎯 **Alternative: Quick Test**
 If you want to test immediately:
-1. Go to: https://github.com/eraashisjha/Ukriti-Jewells
+1. Go to: https://github.com/eraashisjha/TheAlankriti
 2. Click on "index.html" file
 3. Click "Raw" button - this will show your website working
 
 ## 📱 **Expected Result:**
 Once GitHub Pages is enabled, you'll see:
-- Beautiful Ukriti Jewells jewelry website
+- Beautiful TheAlankriti jewelry website
 - Minimalist design with product catalog
 - Responsive mobile layout
 - Shopping cart functionality

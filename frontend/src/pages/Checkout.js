@@ -122,10 +122,10 @@ const Checkout = () => {
     // Generate eSewa payment QR code
     const paymentData = {
       esewaId: '9765723517',
-      payeeName: 'Ukriti Jewells',
+      payeeName: 'TheAlankriti',
       amount: total,
       transactionId: `UJ${Date.now()}`,
-      note: `Order payment for Ukriti Jewells`,
+      note: `Order payment for TheAlankriti`,
       currency: 'NPR'
     };
 

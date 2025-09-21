@@ -1,7 +1,7 @@
 // keepalive.js - Prevents Render service from sleeping
 const https = require('https');
 
-const BACKEND_URL = 'https://thealankriti-backendd.onrender.com/health';
+const BACKEND_URL = 'https://thealankriti-backend.onrender.com/health';
 const PING_INTERVAL = 14 * 60 * 1000; // 14 minutes (before 15-minute sleep)
 
 function pingBackend() {

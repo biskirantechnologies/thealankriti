@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# Ukriti Jewells Stop Script
-echo "🛑 Stopping Ukriti Jewells Development Environment..."
+# TheAlankriti Stop Script
+echo "🛑 Stopping TheAlankriti Development Environment..."
 
 # Colors for output
 RED='\033[0;31m'
@@ -29,8 +29,8 @@ kill_port() {
 
 # Stop screen sessions
 echo -e "${YELLOW}Stopping screen sessions...${NC}"
-screen -S ukriti-backend -X quit 2>/dev/null || true
-screen -S ukriti-frontend -X quit 2>/dev/null || true
+screen -S thealankriti-backend -X quit 2>/dev/null || true
+screen -S thealankriti-frontend -X quit 2>/dev/null || true
 
 # Stop Frontend (port 3000)
 kill_port 3000 "Frontend"

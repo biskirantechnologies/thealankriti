@@ -1,7 +1,7 @@
 {
-  "name": "ukriti-jewells-frontend",
+  "name": "thealankriti-frontend",
   "version": "1.0.0",
-  "description": "Frontend for Ukriti Jewells jewelry store",
+  "description": "Frontend for TheAlankriti jewelry store",
   "homepage": "./",
   "private": true,
   "dependencies": {

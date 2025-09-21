@@ -65,8 +65,8 @@ const OrderSuccess = () => {
   const shareOrder = () => {
     if (navigator.share) {
       navigator.share({
-        title: 'Order Confirmed - Ukriti Jewells',
-        text: `I just ordered beautiful jewelry from Ukriti Jewells! Order #${orderId}`,
+        title: 'Order Confirmed - TheAlankriti',
+        text: `I just ordered beautiful jewelry from TheAlankriti! Order #${orderId}`,
         url: window.location.href,
       });
     } else {

@@ -4,7 +4,7 @@ const fs = require('fs');
 const path = require('path');
 
 // Connect to MongoDB
-const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/ukriti-jewells';
+const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/thealankriti';
 mongoose.connect(mongoUri)
   .then(() => console.log('📊 MongoDB Connected'))
   .catch(err => console.error('MongoDB connection error:', err));

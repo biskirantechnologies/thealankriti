@@ -192,8 +192,8 @@ const AdminOrderManager = () => {
   return (
     <>
       <Helmet>
-        <title>Order Management - Admin Panel | Ukriti Jewells</title>
-        <meta name="description" content="Manage customer orders and track deliveries for Ukriti Jewells" />
+        <title>Order Management - Admin Panel | TheAlankriti</title>
+        <meta name="description" content="Manage customer orders and track deliveries for TheAlankriti" />
       </Helmet>
 
       <div className="min-h-screen bg-gray-50">

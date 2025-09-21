@@ -17,7 +17,7 @@ const getApiBaseUrl = () => {
   const hostname = 'localhost'; // Simulate localhost
   const defaultUrl = hostname === 'localhost' 
     ? 'http://localhost:5000/api' 
-    : 'https://thealankriti-backendd.onrender.com/api';
+    : 'https://thealankriti-backend.onrender.com/api';
   
   const baseUrl = envUrl || defaultUrl;
   const finalUrl = baseUrl.replace('/api', '');

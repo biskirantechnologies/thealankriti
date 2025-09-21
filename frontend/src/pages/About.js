@@ -25,7 +25,7 @@ const About = () => {
             className="text-center max-w-4xl mx-auto"
           >
             <h1 className="text-5xl md:text-7xl font-bold mb-6 bg-gradient-to-r from-amber-200 to-rose-200 bg-clip-text text-transparent">
-              About Ukriti Jewells
+              About TheAlankriti
             </h1>
             <p className="text-xl md:text-2xl mb-8 text-amber-100">
               From homemaker to entrepreneur - Creating beautiful, affordable jewelry with passion and purpose
@@ -104,7 +104,7 @@ const About = () => {
           >
             <h2 className="text-4xl font-bold text-gray-800 mb-4">Meet Our Founder</h2>
             <p className="text-gray-600 text-lg max-w-2xl mx-auto">
-              The passionate entrepreneur behind Ukriti Jewells
+              The passionate entrepreneur behind TheAlankriti
             </p>
           </motion.div>
 

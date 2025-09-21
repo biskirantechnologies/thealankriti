@@ -3,7 +3,7 @@ const QRCode = require('qrcode');
 const generatePaymentQR = async (order) => {
   try {
     const esewaId = process.env.ESEWA_ID || '9765723517';
-    const storeName = process.env.STORE_NAME || 'Ukriti Jewells';
+    const storeName = process.env.STORE_NAME || 'TheAlankriti';
     
     // Generate eSewa payment URL for Nepal
     const esewaPaymentUrl = `esewa://pay?scd=${esewaId}&pn=${encodeURIComponent(storeName)}&am=${order.pricing.total}&cu=NPR&tn=${encodeURIComponent(`Payment for Order ${order.orderNumber}`)}`;

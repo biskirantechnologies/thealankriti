@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# Ukriti Jewells Status Check Script
-echo "📊 Ukriti Jewells Development Environment Status"
+# TheAlankriti Status Check Script
+echo "📊 TheAlankriti Development Environment Status"
 echo "================================================"
 
 # Colors for output
@@ -59,13 +59,14 @@ fi
 
 # Check screen sessions
 echo -e "\n${BLUE}🖥️  Screen Sessions:${NC}"
-if screen -list | grep -q ukriti-backend; then
-    echo -e "${GREEN}✅ Backend screen session exists${NC}"
+if screen -list | grep -q thealankriti-backend; then
+    echo -e "${GREEN}✅ Backend is running (Screen: thealankriti-backend)${NC}"
+    BACKEND_RUNNING=true
 else
-    echo -e "${YELLOW}⚠️  No backend screen session${NC}"
+    echo -e "${RED}❌ Backend is not running${NC}"
 fi
 
-if screen -list | grep -q ukriti-frontend; then
+if screen -list | grep -q thealankriti-frontend; then
     echo -e "${GREEN}✅ Frontend screen session exists${NC}"
 else
     echo -e "${YELLOW}⚠️  No frontend screen session${NC}"

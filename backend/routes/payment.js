@@ -166,7 +166,7 @@ router.get('/methods', (req, res) => {
 router.get('/esewa-info', (req, res) => {
   res.json({
     esewaId: '9765723517',
-    storeName: 'Ukriti Jewells',
+    storeName: 'TheAlankriti',
     paymentMethods: [
       {
         name: 'eSewa QR Code',
@@ -194,7 +194,7 @@ router.get('/esewa-info', (req, res) => {
     ],
     supportInfo: {
       phone: '9765723517',
-      email: 'support@ukritijewells.com',
+      email: 'support@thealankriti.com',
       helpText: 'For payment assistance, contact us with your order number'
     }
   });

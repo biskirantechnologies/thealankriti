@@ -4,6 +4,7 @@ const helmet = require('helmet');
 const morgan = require('morgan');
 const compression = require('compression');
 const rateLimit = require('express-rate-limit');
+const path = require('path');
 require('dotenv').config();
 
 // Session Management Enhancement - Deploy v2.0 - Sept 17, 2025
@@ -130,14 +131,14 @@ app.use('/uploads', (req, res, next) => {
   }
   
   next();
-}, express.static('uploads'));
+}, express.static(path.join(__dirname, 'uploads')));
 
 // Health check endpoint
 app.get('/health', (req, res) => {
   res.status(200).json({ 
     status: 'OK', 
     timestamp: new Date().toISOString(),
-    service: 'Ukriti Jewells API',
+    service: 'TheAlankriti API',
     environment: process.env.NODE_ENV || 'development',
     port: process.env.PORT || 5000,
     uptime: Math.floor(process.uptime()),
@@ -178,7 +179,7 @@ app.use(errorHandler);
 const PORT = process.env.PORT || 5000;
 
 const server = app.listen(PORT, '0.0.0.0', () => {
-  console.log(`🚀 Ukriti Jewells API server running on port ${PORT}`);
+  console.log(`🚀 TheAlankriti API server running on port ${PORT}`);
   console.log(`📍 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`🔗 Health check: http://localhost:${PORT}/health`);
   console.log(`🌐 Server listening on all interfaces (0.0.0.0:${PORT})`);

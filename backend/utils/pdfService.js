@@ -33,7 +33,7 @@ const generateInvoicePDF = async (order) => {
       // Header
       doc.fontSize(28)
          .fillColor(primaryColor)
-         .text(process.env.STORE_NAME || 'Ukriti Jewells', 50, 50, { align: 'left' });
+         .text(process.env.STORE_NAME || 'TheAlankriti', 50, 50, { align: 'left' });
 
       doc.fontSize(12)
          .fillColor(lightGray)
@@ -201,7 +201,7 @@ const generateInvoicePDF = async (order) => {
          .text(`Generated on: ${new Date().toLocaleString('en-IN')}`, 50, footerY + 15, { align: 'center', width: 495 });
 
       // Store contact information
-      doc.text(`Contact: ${process.env.STORE_EMAIL || 'info@ukritijewells.com'}`, 50, footerY + 30, { align: 'center', width: 495 });
+      doc.text(`Contact: ${process.env.STORE_EMAIL || 'info@thealankriti.com'}`, 50, footerY + 30, { align: 'center', width: 495 });
 
       // Finalize the PDF
       doc.end();

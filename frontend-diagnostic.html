@@ -45,7 +45,7 @@
         
         const fallbackUrl = window.location.hostname === 'localhost' 
             ? 'http://localhost:3001/api' 
-            : 'https://thealankriti-backendd.onrender.com/api';
+            : 'https://thealankriti-backend.onrender.com/api';
         document.getElementById('fallback-url').textContent = fallbackUrl;
         
         const actualApiBase = process?.env?.REACT_APP_API_URL || fallbackUrl;

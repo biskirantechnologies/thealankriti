@@ -62,7 +62,7 @@ const Login = () => {
             Welcome Back
           </h2>
           <p className="text-gray-600">
-            Sign in to your Ukriti Jewells account
+            Sign in to your TheAlankriti account
           </p>
         </motion.div>
       </div>

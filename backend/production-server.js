@@ -16,7 +16,7 @@ app.use(express.static(path.join(__dirname, '../frontend/build')));
 app.get('/api/health', (req, res) => {
   res.json({ 
     status: 'OK', 
-    message: 'Ukriti Jewells API is running',
+    message: 'TheAlankriti API is running',
     timestamp: new Date().toISOString()
   });
 });
@@ -32,7 +32,7 @@ app.get('*', (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`🚀 Ukriti Jewells server running on port ${PORT}`);
+  console.log(`🚀 TheAlankriti server running on port ${PORT}`);
   console.log(`📍 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`🔗 Server: http://localhost:${PORT}`);
 });

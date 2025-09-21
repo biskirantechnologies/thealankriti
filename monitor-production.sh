@@ -1,12 +1,12 @@
 #!/bin/bash
 
-# Production Health Monitor for Ukriti Jewells
+# Production Health Monitor for TheAlankriti
 # Usage: ./monitor-production.sh
 
-echo "🔍 UKRITI JEWELLS PRODUCTION HEALTH CHECK"
+echo "🔍 THEALANKRITI PRODUCTION HEALTH CHECK"
 echo "======================================="
 
-BACKEND_URL="https://thealankriti-backendd.onrender.com"
+BACKEND_URL="https://thealankriti-backend.onrender.com"
 FRONTEND_URL="https://thealankriti-frontend.onrender.com"
 
 # Backend Health Check

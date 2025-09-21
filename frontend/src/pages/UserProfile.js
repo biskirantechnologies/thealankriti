@@ -512,7 +512,7 @@ const UserProfile = () => {
   return (
     <>
       <Helmet>
-        <title>My Profile - Ukriti Jewells</title>
+        <title>My Profile - TheAlankriti</title>
         <meta name="description" content="Manage your profile, orders, and preferences" />
       </Helmet>
 

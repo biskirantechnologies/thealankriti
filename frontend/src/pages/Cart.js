@@ -24,7 +24,7 @@ const Cart = () => {
     return (
       <>
         <Helmet>
-          <title>Shopping Cart - Ukriti Jewells</title>
+          <title>Shopping Cart - TheAlankriti</title>
           <meta name="description" content="Your shopping cart is empty. Browse our exquisite jewelry collection and add items to your cart." />
         </Helmet>
         
@@ -54,7 +54,7 @@ const Cart = () => {
   return (
     <>
       <Helmet>
-        <title>{`Shopping Cart (${cartItems?.length || 0} items) - Ukriti Jewells`}</title>
+        <title>{`Shopping Cart (${cartItems?.length || 0} items) - TheAlankriti`}</title>
         <meta name="description" content={`Review your ${cartItems?.length || 0} selected jewelry items before checkout. Total: NPR ${total.toLocaleString()}`} />
       </Helmet>
 
