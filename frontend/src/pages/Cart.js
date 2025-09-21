@@ -4,6 +4,7 @@ import { useCart } from '../contexts/CartContext';
 import { useAuth } from '../contexts/AuthContext';
 import { TrashIcon, MinusIcon, PlusIcon } from '@heroicons/react/24/outline';
 import { Helmet } from 'react-helmet-async';
+import { getImageWithFallback } from '../utils/api';
 
 const Cart = () => {
   const { cartItems = [], updateQuantity, removeFromCart, getTotalPrice, clearCart } = useCart();
@@ -75,7 +76,7 @@ const Cart = () => {
                         <div className="flex-shrink-0 w-24 h-24">
                           <img
                             className="w-full h-full object-cover rounded-md"
-                            src={item.images?.[0] || '/api/placeholder/96/96'}
+                            src={getImageWithFallback(item.images?.[0], 'Product')}
                             alt={item.name}
                           />
                         </div>

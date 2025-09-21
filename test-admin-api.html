@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Admin API Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .test-section { margin: 20px 0; padding: 20px; border: 1px solid #ccc; }
+        button { padding: 10px 20px; margin: 5px; }
+        pre { background: #f5f5f5; padding: 10px; overflow-x: auto; }
+        .error { color: red; }
+        .success { color: green; }
+    </style>
+</head>
+<body>
+    <h1>Admin API Test</h1>
+    
+    <div class="test-section">
+        <h2>Step 1: Login</h2>
+        <button onclick="testLogin()">Login as Admin</button>
+        <p>Status: <span id="loginStatus">Not attempted</span></p>
+        <pre id="loginResult"></pre>
+    </div>
+    
+    <div class="test-section">
+        <h2>Step 2: Fetch Products</h2>
+        <button onclick="testProducts()">Fetch Admin Products</button>
+        <p>Status: <span id="productsStatus">Login first</span></p>
+        <pre id="productsResult"></pre>
+    </div>
+    
+    <div class="test-section">
+        <h2>Step 3: Test Image URLs</h2>
+        <button onclick="testImageUrls()">Test Image URLs from Products</button>
+        <p>Status: <span id="imageStatus">Fetch products first</span></p>
+        <div id="imageTests"></div>
+    </div>
+
+    <script>
+        let authToken = null;
+        let products = null;
+
+        async function testLogin() {
+            const loginStatus = document.getElementById('loginStatus');
+            const loginResult = document.getElementById('loginResult');
+            
+            try {
+                loginStatus.textContent = 'Attempting login...';
+                loginStatus.className = '';
+                
+                const response = await fetch('http://localhost:5000/api/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        email: 'bewithu.aj@gmail.com',
+                        password: 'admin123'
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.token) {
+                    authToken = data.token;
+                    loginStatus.textContent = '✅ Login successful';
+                    loginStatus.className = 'success';
+                    loginResult.textContent = JSON.stringify(data, null, 2);
+                } else {
+                    loginStatus.textContent = '❌ Login failed';
+                    loginStatus.className = 'error';
+                    loginResult.textContent = JSON.stringify(data, null, 2);
+                }
+            } catch (error) {
+                loginStatus.textContent = '❌ Login error';
+                loginStatus.className = 'error';
+                loginResult.textContent = error.message;
+            }
+        }
+
+        async function testProducts() {
+            const productsStatus = document.getElementById('productsStatus');
+            const productsResult = document.getElementById('productsResult');
+            
+            if (!authToken) {
+                productsStatus.textContent = '❌ Login first';
+                productsStatus.className = 'error';
+                return;
+            }
+            
+            try {
+                productsStatus.textContent = 'Fetching products...';
+                productsStatus.className = '';
+                
+                const response = await fetch('http://localhost:5000/api/admin/products', {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    products = data.products;
+                    productsStatus.textContent = `✅ Fetched ${data.products.length} products`;
+                    productsStatus.className = 'success';
+                    
+                    // Show summary
+                    const summary = {
+                        total: data.products.length,
+                        withImages: data.products.filter(p => p.images && p.images.length > 0).length,
+                        ringProduct: data.products.find(p => p.name === 'Ring'),
+                        allProducts: data.products.map(p => ({
+                            name: p.name,
+                            imageCount: p.images ? p.images.length : 0,
+                            firstImage: p.images && p.images.length > 0 ? p.images[0] : null
+                        }))
+                    };
+                    
+                    productsResult.textContent = JSON.stringify(summary, null, 2);
+                } else {
+                    productsStatus.textContent = '❌ Failed to fetch products';
+                    productsStatus.className = 'error';
+                    productsResult.textContent = JSON.stringify(data, null, 2);
+                }
+            } catch (error) {
+                productsStatus.textContent = '❌ Products fetch error';
+                productsStatus.className = 'error';
+                productsResult.textContent = error.message;
+            }
+        }
+
+        async function testImageUrls() {
+            const imageStatus = document.getElementById('imageStatus');
+            const imageTests = document.getElementById('imageTests');
+            
+            if (!products) {
+                imageStatus.textContent = '❌ Fetch products first';
+                imageStatus.className = 'error';
+                return;
+            }
+            
+            imageStatus.textContent = 'Testing image URLs...';
+            imageStatus.className = '';
+            
+            const productsWithImages = products.filter(p => p.images && p.images.length > 0);
+            
+            if (productsWithImages.length === 0) {
+                imageStatus.textContent = '❌ No products with images found';
+                imageStatus.className = 'error';
+                imageTests.innerHTML = '<p>No products have images to test.</p>';
+                return;
+            }
+            
+            imageTests.innerHTML = '';
+            
+            for (const product of productsWithImages) {
+                const firstImage = product.images[0];
+                let imageUrl = '';
+                
+                // Construct URL (same logic as frontend)
+                if (typeof firstImage === 'string') {
+                    imageUrl = firstImage.startsWith('/') ? `http://localhost:5000${firstImage}` : `http://localhost:5000/${firstImage}`;
+                } else if (firstImage && firstImage.url) {
+                    imageUrl = firstImage.url.startsWith('/') ? `http://localhost:5000${firstImage.url}` : `http://localhost:5000/${firstImage.url}`;
+                }
+                
+                const testDiv = document.createElement('div');
+                testDiv.style.margin = '10px 0';
+                testDiv.style.padding = '10px';
+                testDiv.style.border = '1px solid #ddd';
+                
+                testDiv.innerHTML = `
+                    <h4>${product.name}</h4>
+                    <p><strong>Raw Image Data:</strong> ${JSON.stringify(firstImage)}</p>
+                    <p><strong>Constructed URL:</strong> ${imageUrl}</p>
+                    <p><strong>Load Test:</strong> <span id="status-${product._id}">Testing...</span></p>
+                    <img src="${imageUrl}" alt="${product.name}" style="max-width: 150px; border: 1px solid #333;" 
+                         onload="document.getElementById('status-${product._id}').textContent = '✅ Loaded successfully'; document.getElementById('status-${product._id}').className = 'success';"
+                         onerror="document.getElementById('status-${product._id}').textContent = '❌ Failed to load'; document.getElementById('status-${product._id}').className = 'error';" />
+                `;
+                
+                imageTests.appendChild(testDiv);
+            }
+            
+            imageStatus.textContent = `✅ Testing ${productsWithImages.length} products with images`;
+            imageStatus.className = 'success';
+        }
+    </script>
+</body>
+</html>

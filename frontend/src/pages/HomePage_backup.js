@@ -12,6 +12,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { useCart } from '../contexts/CartContext';
 import api from '../services/api';
+import { getImageWithFallback } from '../utils/api';
 
 const Homepage = () => {
   const [featuredProducts, setFeaturedProducts] = useState([]);
@@ -385,7 +386,7 @@ const Homepage = () => {
                   <div className="relative overflow-hidden rounded-t-lg">
                     <Link to={`/products/${product._id}`}>
                       <img
-                        src={product.images[0]?.url || '/placeholder-jewelry.jpg'}
+                        src={getImageWithFallback(product.images[0]?.url, 'Product')}
                         alt={product.name}
                         className="w-full h-64 object-cover group-hover:scale-105 transition-transform duration-500"
                       />

@@ -11,7 +11,7 @@ import {
 import { Helmet } from 'react-helmet-async';
 import { useCart } from '../contexts/CartContext';
 import api from '../services/api';
-import { getImageUrl } from '../utils/api';
+import { getImageUrl, getImageWithFallback } from '../utils/api';
 
 const HomePage = () => {
   const [featuredProducts, setFeaturedProducts] = useState([]);
@@ -21,7 +21,7 @@ const HomePage = () => {
 
   // Helper function to get proper image URL (using imported utility)
   const getImageUrlForProduct = (image) => {
-    if (!image) return '/api/placeholder/400/400';
+    if (!image) return getImageWithFallback(null, 'Product Image');
     
     if (typeof image === 'string') {
       return getImageUrl(image);
@@ -31,7 +31,7 @@ const HomePage = () => {
       return getImageUrl(image.url);
     }
     
-    return '/api/placeholder/400/400';
+    return getImageWithFallback(null, 'Product Image');
   };
 
   const heroSlides = [

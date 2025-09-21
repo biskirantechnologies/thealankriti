@@ -32,8 +32,18 @@ if (process.env.NODE_ENV === 'production') {
   require('./keepalive');
 }
 
-// Security middleware
-app.use(helmet());
+// Security middleware - Modified CSP for image loading
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      imgSrc: ["'self'", "data:", "http://localhost:5000", "http://localhost:3000", "http://localhost:3001", "http://localhost:3002", "http://localhost:3003", "http://localhost:3004"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https:"],
+      scriptSrc: ["'self'"],
+      connectSrc: ["'self'", "http://localhost:5000", "http://localhost:3000", "http://localhost:3001", "http://localhost:3002", "http://localhost:3003", "http://localhost:3004"],
+    },
+  },
+}));
 app.use(compression());
 
 // Rate limiting - Disabled for development
@@ -84,8 +94,43 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // Add user activity tracking middleware for all authenticated routes
 // app.use('/api', trackUserActivity);
 
-// Static files
-app.use('/uploads', express.static('uploads'));
+// Static files with CORS headers - Allow all origins for development
+app.use('/uploads', (req, res, next) => {
+  // Add CORS headers for static files
+  const allowedOrigins = process.env.NODE_ENV === 'production' 
+    ? [
+        'https://thealankriti-frontend.onrender.com',
+        'https://www.thealankriti.com',
+        'https://thealankriti.com',
+        'https://thealankriti.onrender.com'
+      ] 
+    : ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:3002', 'http://localhost:3003', 'http://localhost:3004'];
+  
+  const origin = req.headers.origin;
+  
+  // For development, allow any localhost origin
+  if (process.env.NODE_ENV !== 'production') {
+    if (!origin || origin.includes('localhost')) {
+      res.setHeader('Access-Control-Allow-Origin', origin || '*');
+    }
+  } else {
+    if (allowedOrigins.includes(origin)) {
+      res.setHeader('Access-Control-Allow-Origin', origin);
+    }
+  }
+  
+  res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+  
+  // Handle preflight requests
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+  
+  next();
+}, express.static('uploads'));
 
 // Health check endpoint
 app.get('/health', (req, res) => {

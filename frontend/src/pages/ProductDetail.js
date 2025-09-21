@@ -17,30 +17,27 @@ import { Helmet } from 'react-helmet-async';
 import { useCart } from '../contexts/CartContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useUserTracking, useComponentTracking } from '../hooks/useUserTracking';
+import { getImageUrl, getImageWithFallback } from '../utils/api';
 import toast from 'react-hot-toast';
 
 // Helper function to get proper image URL
-const getImageUrl = (image) => {
+const getImageUrl_Product = (image) => {
   if (!image) {
     return 'https://images.unsplash.com/photo-1573408301185-9146fe634ad0?w=400&h=400&fit=crop';
   }
 
   // If it's a string (file path)
   if (typeof image === 'string') {
-    return image.startsWith('http') 
-      ? image 
-      : `http://localhost:3001${image}`;
+    return getImageUrl(image);
   }
   
   // If it's an object with url property
   if (typeof image === 'object' && image.url) {
-    return image.url.startsWith('http') 
-      ? image.url 
-      : `http://localhost:3001${image.url}`;
+    return getImageUrl(image.url);
   }
   
   // Fallback to placeholder
-  return 'https://images.unsplash.com/photo-1573408301185-9146fe634ad0?w=400&h=400&fit=crop';
+  return getImageWithFallback(null, 'Product');
 };
 
 const ProductDetail = () => {
@@ -159,7 +156,7 @@ const ProductDetail = () => {
       id: product.id,
       name: product.name,
       price: product.price,
-      image: getImageUrl(product.images?.[0]),
+      image: getImageUrl_Product(product.images?.[0]),
       size: selectedSize,
       quantity: quantity
     };
@@ -279,7 +276,7 @@ const ProductDetail = () => {
         <meta name="description" content={product?.shortDescription || product?.description || 'Beautiful jewelry piece from Ukriti Jewells'} />
         <meta property="og:title" content={`${product?.name || 'Product'} - Ukriti Jewells`} />
         <meta property="og:description" content={product?.shortDescription || product?.description} />
-        <meta property="og:image" content={getImageUrl(product?.images?.[0])} />
+        <meta property="og:image" content={getImageUrl_Product(product?.images?.[0])} />
       </Helmet>
       
       <div className="min-h-screen bg-gray-50 py-12">
@@ -334,7 +331,7 @@ const ProductDetail = () => {
                       }`}
                     >
                       <img
-                        src={getImageUrl(image)}
+                        src={getImageUrl_Product(image)}
                         alt={`${product.name} ${index + 1}`}
                         className="w-full h-full object-cover object-center"
                       />
@@ -353,7 +350,7 @@ const ProductDetail = () => {
                   className="relative h-full bg-white rounded-lg overflow-hidden group"
                 >
                   <img
-                    src={getImageUrl(product.images?.[selectedImage])}
+                    src={getImageUrl_Product(product.images?.[selectedImage])}
                     alt={product.name}
                     className="w-full h-full object-cover object-center cursor-zoom-in"
                     onClick={() => setShowImageZoom(true)}
@@ -633,7 +630,7 @@ const ProductDetail = () => {
                 ×
               </button>
               <img
-                src={getImageUrl(product.images?.[selectedImage])}
+                src={getImageUrl_Product(product.images?.[selectedImage])}
                 alt={product.name}
                 className="max-w-full max-h-full object-contain"
               />

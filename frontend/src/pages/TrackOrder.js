@@ -10,7 +10,8 @@ import {
   CalendarIcon
 } from '@heroicons/react/24/outline';
 import { Helmet } from 'react-helmet-async';
-import { ordersAPI } from '../services/api';
+import { userAPI } from '../services/api';
+import { getImageWithFallback } from '../utils/api';
 import toast from 'react-hot-toast';
 
 const TrackOrder = () => {
@@ -358,7 +359,7 @@ const TrackOrder = () => {
                   {order.items.map((item, index) => (
                     <div key={index} className="flex items-center space-x-4 py-4 border-b border-gray-100 last:border-b-0">
                       <img
-                        src={item.image || '/api/placeholder/80/80'}
+                        src={getImageWithFallback(item.image, 'Product')}
                         alt={item.name}
                         className="w-16 h-16 object-cover rounded-lg"
                       />

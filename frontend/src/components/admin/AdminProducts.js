@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { adminAPI } from '../../services/api';
+import { getImageWithFallback, getImageUrl } from '../../utils/api';
 import { 
   PencilIcon, 
   TrashIcon,
@@ -10,11 +11,45 @@ import {
 
 const AdminProducts = () => {
   const [products, setProducts] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
+  const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+
+  // Helper to get proper image URL
+  const getProductImageUrl = (product) => {
+    console.log('🖼️ getProductImageUrl called for:', product.name);
+    console.log('🖼️ Product images:', product.images);
+    console.log('🖼️ Images length:', product.images ? product.images.length : 'undefined');
+    
+    if (!product.images || !product.images.length) {
+      console.log('🖼️ No images found, returning fallback');
+      return getImageWithFallback(null, 'No Image');
+    }
+    
+    const firstImage = product.images[0];
+    console.log('🖼️ First image:', firstImage);
+    console.log('🖼️ First image type:', typeof firstImage);
+    
+    // If it's a string, use getImageUrl
+    if (typeof firstImage === 'string') {
+      const url = getImageUrl(firstImage);
+      console.log('🖼️ String image URL:', url);
+      return url;
+    }
+    
+    // If it's an object with url property
+    if (firstImage && typeof firstImage === 'object' && firstImage.url) {
+      const url = getImageUrl(firstImage.url);
+      console.log('🖼️ Object image URL:', url);
+      return url;
+    }
+    
+    // Fallback
+    console.log('🖼️ Invalid image format, returning fallback');
+    return getImageWithFallback(null, 'No Image');
+  };
 
   const categories = [
     { value: 'all', label: 'All Categories' },
@@ -156,7 +191,7 @@ const AdminProducts = () => {
                 <div key={product._id} className="border border-gray-200 rounded-lg overflow-hidden hover:shadow-lg transition-shadow">
                   <div className="aspect-w-1 aspect-h-1 bg-gray-200">
                     <img
-                      src={product.images?.[0] || 'https://via.placeholder.com/300x300/f3f4f6/6b7280?text=No+Image'}
+                      src={getProductImageUrl(product)}
                       alt={product.name}
                       className="w-full h-40 sm:h-48 object-cover"
                     />

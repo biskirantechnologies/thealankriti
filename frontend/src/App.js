@@ -1,6 +1,5 @@
 import React, { Suspense, useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { useQuery } from 'react-query';
 import { Toaster } from 'react-hot-toast';
 
 import Layout from './components/Layout/Layout';
@@ -131,8 +130,10 @@ const AdminLogin = React.lazy(() => import('./pages/auth/AdminLogin'));
 
 // Admin components
 const AdminDashboard = React.lazy(() => import('./components/admin/AdminDashboard2'));
-const AdminProducts = React.lazy(() => import('./components/admin/AdminProducts'));
-const AdminOrders = React.lazy(() => import('./components/admin/AdminOrders'));
+const AdminProductsPage = React.lazy(() => import('./components/admin/AdminProductsPage'));
+const AdminOrdersPage = React.lazy(() => import('./components/admin/AdminOrdersPage'));
+const AdminCustomersPage = React.lazy(() => import('./components/admin/AdminCustomersPage'));
+const AdminAnalyticsPage = React.lazy(() => import('./components/admin/AdminAnalyticsPage'));
 const AdminLayout = React.lazy(() => import('./components/admin/AdminLayout'));
 
 // Simple placeholder components for missing pages
@@ -142,8 +143,6 @@ const OrderDetail = () => <div className="p-8">Order Detail - Coming Soon</div>;
 const TrackOrder = () => <div className="p-8">Track Order - Coming Soon</div>;
 const Profile = () => <div className="p-8">Profile Page - Coming Soon</div>;
 const NotFound = () => <div className="p-8">404 - Page Not Found</div>;
-const AdminCustomers = () => <div className="p-8">Admin Customers - Coming Soon</div>;
-const AdminAnalytics = () => <div className="p-8">Admin Analytics - Coming Soon</div>;
 
 function App() {
   return (
@@ -151,11 +150,17 @@ function App() {
       <ScrollToTop />
       <Suspense fallback={<LoadingSpinner />}>
         <Routes>
-          {/* Admin Routes - Use AdminLayout instead of regular Layout */}
+          {/* Admin Routes - Use AdminLayout for all admin pages */}
           <Route path="/admin/*" element={
             <AdminRoute>
               <AdminLayout>
-                <AdminDashboard />
+                <Routes>
+                  <Route path="/" element={<AdminDashboard />} />
+                  <Route path="/products" element={<AdminProductsPage />} />
+                  <Route path="/orders" element={<AdminOrdersPage />} />
+                  <Route path="/customers" element={<AdminCustomersPage />} />
+                  <Route path="/analytics" element={<AdminAnalyticsPage />} />
+                </Routes>
               </AdminLayout>
             </AdminRoute>
           } />

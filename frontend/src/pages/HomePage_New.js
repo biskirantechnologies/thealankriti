@@ -10,9 +10,10 @@ import {
 } from '@heroicons/react/24/outline';
 import { useCart } from '../contexts/CartContext';
 import api from '../services/api';
+import { getImageUrl } from '../utils/api';
 
 // Helper function to get proper image URL
-const getImageUrl = (product) => {
+const getImageUrl_Product = (product) => {
   if (!product.images || !Array.isArray(product.images) || product.images.length === 0) {
     return 'https://images.unsplash.com/photo-1573408301185-9146fe634ad0?w=400&h=400&fit=crop';
   }
@@ -21,16 +22,12 @@ const getImageUrl = (product) => {
   
   // If it's a string (file path)
   if (typeof firstImage === 'string') {
-    return firstImage.startsWith('http') 
-      ? firstImage 
-      : `http://localhost:3001${firstImage}`;
+    return getImageUrl(firstImage);
   }
   
   // If it's an object with url property
   if (firstImage && typeof firstImage === 'object' && firstImage.url) {
-    return firstImage.url.startsWith('http') 
-      ? firstImage.url 
-      : `http://localhost:3001${firstImage.url}`;
+    return getImageUrl(firstImage.url);
   }
   
   // Fallback to placeholder
@@ -302,7 +299,7 @@ const Homepage = () => {
                 >
                   <div className="relative overflow-hidden">
                     <img
-                      src={getImageUrl(product)}
+                      src={getImageUrl_Product(product)}
                       alt={product.name}
                       className="w-full aspect-square object-cover group-hover:scale-105 transition-transform duration-500"
                     />

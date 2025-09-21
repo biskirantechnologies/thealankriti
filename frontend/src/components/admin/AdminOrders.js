@@ -10,6 +10,7 @@ import {
   DevicePhoneMobileIcon
 } from '@heroicons/react/24/outline';
 import { adminAPI } from '../../services/api';
+import { getImageWithFallback } from '../../utils/api';
 import toast from 'react-hot-toast';
 
 const AdminOrders = () => {
@@ -628,7 +629,7 @@ const AdminOrders = () => {
                               <div className="flex items-center">
                                 <img
                                   className="h-8 w-8 sm:h-10 sm:w-10 rounded-md object-cover"
-                                  src={item.productSnapshot?.image || item.product?.images?.[0] || '/api/placeholder/40/40'}
+                                  src={getImageWithFallback(item.productSnapshot?.image || item.product?.images?.[0], 'Product')}
                                   alt={item.productSnapshot?.name || item.product?.name || 'Product'}
                                 />
                                 <div className="ml-2 sm:ml-4">

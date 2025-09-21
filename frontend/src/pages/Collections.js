@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { ChevronRightIcon, SparklesIcon, HeartIcon, StarIcon } from '@heroicons/react/24/outline';
 import { Link } from 'react-router-dom';
 import api from '../services/api';
+import { getImageUrl } from '../utils/api';
 
 const Collections = () => {
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -44,7 +45,7 @@ const Collections = () => {
           description: `Beautiful ${category} pieces crafted with precision`,
           image: stats.products[0]?.images?.[0] 
             ? (typeof stats.products[0].images[0] === 'string' 
-                ? `http://localhost:3001${stats.products[0].images[0]}`
+                ? getImageUrl(stats.products[0].images[0])
                 : stats.products[0].images[0].url || 'https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=500')
             : 'https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=500',
           category: category,

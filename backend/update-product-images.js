@@ -1,49 +1,66 @@
 const mongoose = require('mongoose');
+const Product = require('./models/Product');
+const fs = require('fs');
+const path = require('path');
 
 // Connect to MongoDB
-mongoose.connect('mongodb://localhost:27017/ukriti_jewells')
+const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/ukriti-jewells';
+mongoose.connect(mongoUri)
   .then(() => console.log('📊 MongoDB Connected'))
   .catch(err => console.error('MongoDB connection error:', err));
 
-// Product schema (simplified)
-const productSchema = new mongoose.Schema({
-  name: String,
-  images: [{
-    url: String,
-    alt: String,
-    isPrimary: { type: Boolean, default: false }
-  }],
-  price: Number,
-  stockQuantity: Number,
-  sku: String
-});
-
-const Product = mongoose.model('Product', productSchema);
-
 async function updateProductImages() {
   try {
-    console.log('🔧 Updating Products with Sample Images...\n');
+    console.log('🔧 Updating Products with Available Images...\n');
+    
+    // Get available images from uploads directory
+    const uploadsDir = path.join(__dirname, 'uploads', 'products');
+    let availableImages = [];
+    
+    try {
+      availableImages = fs.readdirSync(uploadsDir).filter(file => 
+        /\.(jpg|jpeg|png|gif|webp)$/i.test(file)
+      );
+    } catch (error) {
+      console.error('Error reading uploads directory:', error);
+    }
+    
+    console.log(`� Found ${availableImages.length} available images:`, availableImages);
     
     const products = await Product.find({});
     console.log(`📊 Found ${products.length} products to update\n`);
     
-    // Sample image (using one that exists)
-    const sampleImageUrl = '/uploads/products/product-1756484332742-131039068.png';
+    if (availableImages.length === 0) {
+      console.log('⚠️ No images found in uploads directory');
+      return;
+    }
     
     for (let i = 0; i < products.length; i++) {
       const product = products[i];
       
-      // Update product with sample image
-      product.images = [{
-        url: sampleImageUrl,
-        alt: `${product.name} image`,
-        isPrimary: true
-      }];
+      // Clear existing images
+      product.images = [];
+      
+      // Assign 1-2 images per product, cycling through available images
+      const numImages = Math.min(2, availableImages.length);
+      
+      for (let j = 0; j < numImages; j++) {
+        const imageIndex = (i * numImages + j) % availableImages.length;
+        const imageFile = availableImages[imageIndex];
+        
+        product.images.push({
+          url: `/uploads/products/${imageFile}`,
+          alt: `${product.name} - Image ${j + 1}`,
+          isPrimary: j === 0  // First image is primary
+        });
+      }
       
       await product.save();
       
-      console.log(`✅ Updated ${product.name} (SKU: ${product.sku})`);
-      console.log(`   Image URL: ${sampleImageUrl}`);
+      console.log(`✅ Updated ${product.name} (SKU: ${product.sku || 'N/A'})`);
+      product.images.forEach((img, idx) => {
+        console.log(`   Image ${idx + 1}: ${img.url} (Primary: ${img.isPrimary})`);
+      });
       console.log('');
     }
     

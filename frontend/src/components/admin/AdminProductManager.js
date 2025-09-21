@@ -3,21 +3,16 @@ import {
   PlusIcon, 
   PencilIcon, 
   TrashIcon, 
-  EyeIcon,
   ArrowUpIcon,
   ArrowDownIcon,
   PhotoIcon,
-  MagnifyingGlassIcon,
-  FunnelIcon
+  MagnifyingGlassIcon
 } from '@heroicons/react/24/outline';
 import { Helmet } from 'react-helmet-async';
 import { adminAPI } from '../../services/api';
+import { getApiUrl } from '../../utils/api';
 import toast from 'react-hot-toast';
 import Cookies from 'js-cookie';
-
-// Debug logging
-console.log('AdminProductManager loaded');
-console.log('Current auth token:', Cookies.get('token'));
 
 const AdminProductManager = () => {
   const [products, setProducts] = useState([]);
@@ -85,10 +80,7 @@ const AdminProductManager = () => {
         sortOrder: sortOrder
       };
       
-      console.log('🔍 Fetching products with params:', params);
       const response = await adminAPI.getProducts(params);
-      console.log('📦 Fetched products response:', response.data);
-      console.log('📦 Products array:', response.data.products);
       
       setProducts(response.data.products || []);
       setTotalPages(response.data.pagination?.totalPages || 1);
@@ -105,7 +97,6 @@ const AdminProductManager = () => {
   // Image handling functions
   const handleImageSelect = (e) => {
     const files = Array.from(e.target.files);
-    console.log('Selected files:', files);
     
     if (files.length + imageFiles.length > 5) {
       toast.error('Maximum 5 images allowed');
@@ -131,7 +122,9 @@ const AdminProductManager = () => {
   };
 
   const uploadImages = async (productId) => {
-    if (imageFiles.length === 0) return [];
+    if (imageFiles.length === 0) {
+      return [];
+    }
     
     try {
       setUploadingImages(true);
@@ -143,7 +136,7 @@ const AdminProductManager = () => {
         formData.append('productId', productId);
         
         // Upload to a simple image storage endpoint
-        const response = await fetch('http://localhost:3001/api/admin/upload-image', {
+        const response = await fetch(getApiUrl('/api/admin/upload-image'), {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${Cookies.get('token')}`
@@ -155,7 +148,8 @@ const AdminProductManager = () => {
           const data = await response.json();
           uploadedImages.push(data.imageUrl);
         } else {
-          console.error('Failed to upload image:', file.name);
+          const errorText = await response.text();
+          console.error('Failed to upload image:', file.name, 'Status:', response.status, 'Error:', errorText);
         }
       }
       
@@ -169,47 +163,31 @@ const AdminProductManager = () => {
   };
 
   // Helper function to get image URL
-  const getImageUrl = (product) => {
-    console.log('🖼️ getImageUrl called for product:', product.name);
-    console.log('🖼️ Product images:', product.images);
-    
+  const getImageUrlForProduct = (product) => {
     if (!product.images || !product.images.length) {
-      console.log('🖼️ No images found, using placeholder');
-      return 'https://via.placeholder.com/300x300/f3f4f6/6b7280?text=No+Image';
+      return null;
     }
 
     const firstImage = product.images[0];
-    console.log('🖼️ First image:', firstImage, 'Type:', typeof firstImage);
     
-    let imageUrl = '';
-    
-    // If it's a string (new format)
+    // Direct URL construction
+    let imagePath = '';
     if (typeof firstImage === 'string') {
-      imageUrl = firstImage.startsWith('http') 
-        ? firstImage 
-        : `http://localhost:3001${firstImage}`;
-      console.log('🖼️ String format image URL:', imageUrl);
-    }
-    // If it's an object with url property (database format)
-    else if (firstImage && typeof firstImage === 'object' && firstImage.url) {
-      imageUrl = firstImage.url.startsWith('http') 
-        ? firstImage.url 
-        : `http://localhost:3001${firstImage.url}`;
-      console.log('🖼️ Object format image URL:', imageUrl);
-    }
-    // Fallback
-    else {
-      console.log('🖼️ Invalid image format, using fallback placeholder');
-      return 'https://via.placeholder.com/300x300/f3f4f6/6b7280?text=Invalid+Format';
+      imagePath = firstImage;
+    } else if (firstImage && firstImage.url) {
+      imagePath = firstImage.url;
+    } else {
+      return null;
     }
     
-    // Ensure the URL is absolute and correct
-    if (!imageUrl.startsWith('http')) {
-      imageUrl = `http://localhost:3001${imageUrl}`;
+    // Ensure path starts with /uploads
+    if (!imagePath.startsWith('/uploads')) {
+      imagePath = `/uploads/${imagePath}`;
     }
     
-    console.log('🖼️ Final image URL:', imageUrl);
-    return imageUrl;
+    // Build complete URL with cache buster
+    const fullUrl = `http://localhost:5000${imagePath}?cache=${Date.now()}`;
+    return fullUrl;
   };
 
   const resetImageState = () => {
@@ -222,19 +200,11 @@ const AdminProductManager = () => {
   const handleAddProduct = async (e) => {
     e.preventDefault();
     
-    console.log('=== ADD PRODUCT DEBUG START ===');
-    console.log('Form state:', productForm);
-    
     try {
       setLoading(true);
       
       // Validate required fields
       if (!productForm.name || !productForm.description || !productForm.price || !productForm.stockQuantity) {
-        console.error('Validation failed - missing required fields');
-        console.log('Name:', productForm.name);
-        console.log('Description:', productForm.description);
-        console.log('Price:', productForm.price);
-        console.log('Stock:', productForm.stockQuantity);
         toast.error('Please fill in all required fields');
         return;
       }
@@ -256,26 +226,25 @@ const AdminProductManager = () => {
         images: productForm.images || []
       };
       
-      console.log('Creating product with data:', productData);
-      console.log('About to call adminAPI.createProduct...');
-      
       const response = await adminAPI.createProduct(productData);
-      console.log('Product creation response:', response);
       
       // Upload images if any
       if (imageFiles.length > 0) {
-        console.log('Uploading images...');
         const uploadedImageUrls = await uploadImages(response.data.product._id);
         
         if (uploadedImageUrls.length > 0) {
-          // Update product with image URLs
+          // Convert URLs to proper image objects
+          const imageObjects = uploadedImageUrls.map((url, index) => ({
+            url: url,
+            alt: `${productData.name} - Image ${index + 1}`,
+            isPrimary: index === 0
+          }));
+          
+          // Update product with image objects
           await adminAPI.updateProduct(response.data.product._id, {
-            images: uploadedImageUrls
+            images: imageObjects
           });
-          console.log('Product updated with images:', uploadedImageUrls);
         }
-      } else {
-        console.log('No images to upload');
       }
       
       toast.success('Product added successfully');
@@ -283,17 +252,7 @@ const AdminProductManager = () => {
       resetForm();
       resetImageState();
       fetchProducts();
-      console.log('=== ADD PRODUCT SUCCESS ===');
     } catch (error) {
-      console.error('=== ADD PRODUCT ERROR ===');
-      console.error('Error object:', error);
-      console.error('Error response:', error.response);
-      console.error('Error message:', error.message);
-      if (error.response) {
-        console.error('Response status:', error.response.status);
-        console.error('Response data:', error.response.data);
-        console.error('Response headers:', error.response.headers);
-      }
       
       const errorMessage = error.response?.data?.message || error.message || 'Failed to add product';
       console.error('Final error message:', errorMessage);
@@ -338,23 +297,12 @@ const AdminProductManager = () => {
 
     try {
       setUpdating(prev => ({ ...prev, [productId]: true }));
-      console.log('🗑️ Deleting product:', { productId, productName });
       
-      const response = await adminAPI.deleteProduct(productId);
-      console.log('✅ Delete response:', response);
+      await adminAPI.deleteProduct(productId);
       
       toast.success('Product deleted successfully');
       fetchProducts();
     } catch (error) {
-      console.error('❌ Error deleting product:', error);
-      console.error('Error details:', {
-        message: error.message,
-        status: error.response?.status,
-        statusText: error.response?.statusText,
-        data: error.response?.data,
-        headers: error.response?.headers
-      });
-      
       const errorMessage = error.response?.data?.message || error.message || 'Failed to delete product';
       toast.error(`Failed to delete product: ${errorMessage}`);
     } finally {
@@ -424,15 +372,6 @@ const AdminProductManager = () => {
     });
   };
 
-  const handleSort = (field) => {
-    if (sortBy === field) {
-      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortBy(field);
-      setSortOrder('asc');
-    }
-  };
-
   const formatPrice = (price) => {
     return new Intl.NumberFormat('en-IN', {
       style: 'currency',
@@ -465,13 +404,15 @@ const AdminProductManager = () => {
                 <h1 className="text-2xl font-bold text-gray-900">Product Management</h1>
                 <p className="text-sm text-gray-600">Manage your jewelry inventory</p>
               </div>
-              <button
-                onClick={() => setShowAddModal(true)}
-                className="bg-gold text-white px-4 py-2 rounded-lg hover:bg-gold-dark transition-colors flex items-center"
-              >
-                <PlusIcon className="w-5 h-5 mr-2" />
-                Add Product
-              </button>
+              <div className="flex space-x-2">
+                <button
+                  onClick={() => setShowAddModal(true)}
+                  className="bg-gold text-white px-4 py-2 rounded-lg hover:bg-gold-dark transition-colors flex items-center"
+                >
+                  <PlusIcon className="w-5 h-5 mr-2" />
+                  Add Product
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -540,14 +481,27 @@ const AdminProductManager = () => {
 
           {/* Products Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+
             {products.map(product => (
               <div key={product._id} className="bg-white rounded-lg shadow hover:shadow-lg transition-shadow">
                 <div className="aspect-square relative">
-                  <img
-                    src={getImageUrl(product)}
-                    alt={product.name}
-                    className="w-full h-full object-cover rounded-t-lg"
-                  />
+                  {(() => {
+                    const imageUrl = getImageUrlForProduct(product);
+                    return imageUrl ? (
+                      <img
+                        src={imageUrl}
+                        alt={product.name}
+                        className="w-full h-full object-cover rounded-t-lg"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gray-100 flex items-center justify-center text-gray-400 text-sm rounded-t-lg">
+                        <div className="text-center">
+                          <div>📷</div>
+                          <div className="text-xs mt-1">No Image</div>
+                        </div>
+                      </div>
+                    );
+                  })()}
                   {product.featured && (
                     <div className="absolute top-2 left-2 bg-gold text-white px-2 py-1 rounded text-xs font-medium">
                       Featured

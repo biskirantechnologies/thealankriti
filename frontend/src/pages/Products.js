@@ -10,31 +10,28 @@ import {
 import { Helmet } from 'react-helmet-async';
 import { useCart } from '../contexts/CartContext';
 import api from '../services/api';
+import { getImageUrl, getImageWithFallback } from '../utils/api';
 
 // Helper function to get proper image URL
-const getImageUrl = (product) => {
+const getImageUrl_Product = (product) => {
   if (!product.images || !Array.isArray(product.images) || product.images.length === 0) {
-    return 'https://images.unsplash.com/photo-1573408301185-9146fe634ad0?w=400&h=400&fit=crop';
+    return getImageWithFallback(null, 'Product');
   }
 
   const firstImage = product.images[0];
   
-  // If it's a string (file path)
+  // If it's a string (URL)
   if (typeof firstImage === 'string') {
-    return firstImage.startsWith('http') 
-      ? firstImage 
-      : `http://localhost:3001${firstImage}`;
+    return getImageUrl(firstImage);
   }
   
   // If it's an object with url property
   if (firstImage && typeof firstImage === 'object' && firstImage.url) {
-    return firstImage.url.startsWith('http') 
-      ? firstImage.url 
-      : `http://localhost:3001${firstImage.url}`;
+    return getImageUrl(firstImage.url);
   }
   
-  // Fallback to placeholder
-  return 'https://images.unsplash.com/photo-1573408301185-9146fe634ad0?w=400&h=400&fit=crop';
+  // Fallback to generic placeholder
+  return getImageWithFallback(null, 'Product');
 };
 
 const Products = () => {
@@ -191,7 +188,7 @@ const Products = () => {
       id: product._id,
       name: product.name,
       price: product.price,
-      image: getImageUrl(product),
+      image: getImageUrl_Product(product),
       quantity: 1
     });
   };
@@ -381,7 +378,7 @@ const Products = () => {
                       <div className="relative overflow-hidden rounded-t-lg">
                         <Link to={`/products/${product._id}`}>
                           <img
-                            src={getImageUrl(product)}
+                            src={getImageUrl_Product(product)}
                             alt={product.name}
                             className="w-full h-64 object-cover group-hover:scale-105 transition-transform duration-500"
                           />
