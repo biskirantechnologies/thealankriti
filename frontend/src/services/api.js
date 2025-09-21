@@ -5,7 +5,7 @@ import toast from 'react-hot-toast';
 // Create axios instance
 const api = axios.create({
   baseURL: process.env.REACT_APP_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:5000/api' : 'https://thealankriti-backend.onrender.com/api'),
-  timeout: 30000,
+  timeout: 10000, // Reduced from 30000 to 10000ms
   headers: {
     'Content-Type': 'application/json',
   },
@@ -31,9 +31,31 @@ api.interceptors.response.use(
   (error) => {
     const { response } = error;
     
+    // Enhanced logging for debugging
+    console.log('🔥 API Error Details:', {
+      message: error.message,
+      code: error.code,
+      response: response ? {
+        status: response.status,
+        statusText: response.statusText,
+        data: response.data
+      } : 'No response',
+      request: error.request ? 'Request made' : 'No request',
+      config: error.config ? {
+        url: error.config.url,
+        method: error.config.method,
+        timeout: error.config.timeout
+      } : 'No config'
+    });
+    
     // Network error (no response)
     if (!response) {
-      console.error('Network Error:', error.message);
+      console.error('🌐 Network Error Details:', {
+        message: error.message,
+        code: error.code,
+        stack: error.stack
+      });
+      
       if (error.code === 'ECONNABORTED') {
         toast.error('Request timeout. Please check your connection.');
       } else if (error.message.includes('Network Error')) {

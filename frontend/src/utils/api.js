@@ -30,10 +30,10 @@ const getApiUrl = (endpoint = '') => {
 
 // Utility function to get image URL
 const getImageUrl = (imagePath) => {
-  console.log('🔧 getImageUrl called with:', imagePath);
+  console.log('🔧 getImageUrl called with:', imagePath, 'Type:', typeof imagePath);
   
-  if (!imagePath) {
-    console.log('🔧 No imagePath provided, returning empty string');
+  if (!imagePath || typeof imagePath !== 'string') {
+    console.log('🔧 No imagePath provided or not a string, returning empty string');
     return '';
   }
   

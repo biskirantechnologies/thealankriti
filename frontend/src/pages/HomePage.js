@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { 
   ArrowRightIcon,
-  CheckIcon,
   ShieldCheckIcon,
   TruckIcon,
   SparklesIcon
@@ -13,6 +12,56 @@ import { useCart } from '../contexts/CartContext';
 import api from '../services/api';
 import { getImageUrl, getImageWithFallback } from '../utils/api';
 
+// Move heroSlides outside component to prevent recreation on every render
+const heroSlides = [
+  {
+    id: 1,
+    title: "Timeless Elegance",
+    subtitle: "Handcrafted Perfection",
+    description: "Discover jewelry that tells your story",
+    image: "https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?ixlib=rb-4.0.3&auto=format&fit=crop&w=2000&q=80",
+    cta: "Explore Collection",
+    link: "/collections"
+  },
+  {
+    id: 2,
+    title: "Diamond Dreams",
+    subtitle: "Unmatched Brilliance", 
+    description: "Where luxury meets artistry",
+    image: "https://images.unsplash.com/photo-1506630448388-4e683c67ddb0?ixlib=rb-4.0.3&auto=format&fit=crop&w=2000&q=80",
+    cta: "Shop Diamonds",
+    link: "/products?category=diamond"
+  },
+  {
+    id: 3,
+    title: "Modern Minimalism",
+    subtitle: "Sophisticated Simplicity",
+    description: "Clean lines, stunning impact",
+    image: "https://images.unsplash.com/photo-1611085583191-a3b181a88401?ixlib=rb-4.0.3&auto=format&fit=crop&w=2000&q=80",
+    cta: "Discover More",
+    link: "/products"
+  }
+];
+
+// Move features outside component as well for optimization
+const features = [
+  {
+    icon: ShieldCheckIcon,
+    title: "Certified Quality",
+    description: "Every piece is certified and authenticated"
+  },
+  {
+    icon: TruckIcon,
+    title: "Free Shipping",
+    description: "Complimentary shipping on all orders"
+  },
+  {
+    icon: SparklesIcon,
+    title: "Lifetime Warranty",
+    description: "Comprehensive coverage for peace of mind"
+  }
+];
+
 const HomePage = () => {
   const [featuredProducts, setFeaturedProducts] = useState([]);
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -21,66 +70,26 @@ const HomePage = () => {
 
   // Helper function to get proper image URL (using imported utility)
   const getImageUrlForProduct = (image) => {
-    if (!image) return getImageWithFallback(null, 'Product Image');
+    console.log('🔧 getImageUrlForProduct called with:', image, 'Type:', typeof image);
+    
+    if (!image) {
+      console.log('🔧 No image provided, using fallback');
+      return getImageWithFallback(null, 'Product Image');
+    }
     
     if (typeof image === 'string') {
+      console.log('🔧 Image is string:', image);
       return getImageUrl(image);
     }
     
     if (typeof image === 'object' && image.url) {
+      console.log('🔧 Image is object with url:', image.url);
       return getImageUrl(image.url);
     }
     
+    console.log('🔧 Unknown image format, using fallback:', image);
     return getImageWithFallback(null, 'Product Image');
   };
-
-  const heroSlides = [
-    {
-      id: 1,
-      title: "Timeless Elegance",
-      subtitle: "Handcrafted Perfection",
-      description: "Discover jewelry that tells your story",
-      image: "https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?ixlib=rb-4.0.3&auto=format&fit=crop&w=2000&q=80",
-      cta: "Explore Collection",
-      link: "/collections"
-    },
-    {
-      id: 2,
-      title: "Diamond Dreams",
-      subtitle: "Unmatched Brilliance", 
-      description: "Where luxury meets artistry",
-      image: "https://images.unsplash.com/photo-1506630448388-4e683c67ddb0?ixlib=rb-4.0.3&auto=format&fit=crop&w=2000&q=80",
-      cta: "Shop Diamonds",
-      link: "/products?category=diamond"
-    },
-    {
-      id: 3,
-      title: "Modern Minimalism",
-      subtitle: "Sophisticated Simplicity",
-      description: "Clean lines, stunning impact",
-      image: "https://images.unsplash.com/photo-1611085583191-a3b181a88401?ixlib=rb-4.0.3&auto=format&fit=crop&w=2000&q=80",
-      cta: "Discover More",
-      link: "/products"
-    }
-  ];
-
-  const features = [
-    {
-      icon: ShieldCheckIcon,
-      title: "Certified Quality",
-      description: "Every piece is certified and authenticated"
-    },
-    {
-      icon: TruckIcon,
-      title: "Free Shipping",
-      description: "Complimentary shipping on all orders"
-    },
-    {
-      icon: SparklesIcon,
-      title: "Lifetime Warranty",
-      description: "Comprehensive coverage for peace of mind"
-    }
-  ];
 
   useEffect(() => {
     const fetchFeaturedProducts = async () => {
