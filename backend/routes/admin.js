@@ -1225,4 +1225,72 @@ router.post('/upload-image', adminAuth, (req, res) => {
   });
 });
 
+// @route   POST /api/admin/upload-existing-image
+// @desc    Upload existing image file to production (for migration)
+// @access  Private/Admin
+router.post('/upload-existing-image', adminAuth, (req, res) => {
+  // Use a custom storage that preserves the original filename
+  const existingImageStorage = multer.diskStorage({
+    destination: function (req, file, cb) {
+      cb(null, uploadDir);
+    },
+    filename: function (req, file, cb) {
+      // Keep the original filename for existing images
+      cb(null, file.originalname);
+    }
+  });
+
+  const existingImageUpload = multer({
+    storage: existingImageStorage,
+    fileFilter: fileFilter,
+    limits: {
+      fileSize: 10 * 1024 * 1024 // 10MB limit for existing images
+    }
+  });
+
+  existingImageUpload.single('image')(req, res, (err) => {
+    try {
+      if (err) {
+        if (err instanceof multer.MulterError) {
+          if (err.code === 'LIMIT_FILE_SIZE') {
+            return res.status(400).json({ 
+              message: 'File too large. Maximum size allowed is 10MB.' 
+            });
+          }
+          return res.status(400).json({ 
+            message: `Upload error: ${err.message}` 
+          });
+        } else if (err.message === 'Only image files are allowed!') {
+          return res.status(400).json({ 
+            message: 'Only image files (JPG, PNG, GIF, WebP) are allowed.' 
+          });
+        }
+        return res.status(500).json({ 
+          message: 'Upload failed. Please try again.' 
+        });
+      }
+
+      if (!req.file) {
+        return res.status(400).json({ message: 'No image file provided' });
+      }
+
+      // Generate image URL
+      const imageUrl = `/uploads/products/${req.file.filename}`;
+      
+      console.log(`✅ Existing image uploaded: ${req.file.filename}`);
+      
+      res.json({
+        message: 'Existing image uploaded successfully',
+        imageUrl: imageUrl,
+        filename: req.file.filename,
+        size: req.file.size,
+        originalName: req.file.originalname
+      });
+    } catch (error) {
+      console.error('Existing image upload error:', error);
+      res.status(500).json({ message: 'Failed to upload existing image' });
+    }
+  });
+});
+
 module.exports = router;
