@@ -1,7 +1,7 @@
 services:
   # Backend API Service
   - type: web
-    name: thealankriti-backend
+    name: thealankriti-backendd
     runtime: node
     rootDir: backend
     buildCommand: npm install
@@ -42,4 +42,4 @@ services:
         destination: /index.html
     envVars:
       - key: REACT_APP_API_URL
-        value: https://thealankriti-backend.onrender.com
+        value: https://thealankriti-backendd.onrender.com
