@@ -11,6 +11,7 @@ import { Helmet } from 'react-helmet-async';
 import { useCart } from '../contexts/CartContext';
 import api from '../services/api';
 import { getImageUrl, getImageWithFallback } from '../utils/api';
+import SafeImage from '../components/SafeImage';
 
 // Move heroSlides outside component to prevent recreation on every render
 const heroSlides = [
@@ -312,10 +313,11 @@ const HomePage = () => {
                   className="group bg-white hover:shadow-lg transition-shadow duration-300"
                 >
                   <div className="relative overflow-hidden">
-                    <img
+                    <SafeImage
                       src={getImageUrlForProduct(product.images?.[0])}
                       alt={product.name}
                       className="w-full aspect-square object-cover group-hover:scale-105 transition-transform duration-500"
+                      fallbackType="jewelry"
                     />
                   </div>
                   
