@@ -2,8 +2,35 @@ const express = require('express');
 const { generatePaymentQR, verifyEsewaPayment } = require('../utils/qrService');
 const Order = require('../models/Order');
 const { auth } = require('../middleware/auth');
+const multer = require('multer');
+const path = require('path');
 
 const router = express.Router();
+
+// Configure multer for screenshot uploads
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, 'uploads/payment-screenshots/')
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, 'payment-' + uniqueSuffix + path.extname(file.originalname));
+  }
+});
+
+const upload = multer({ 
+  storage: storage,
+  limits: {
+    fileSize: 5 * 1024 * 1024 // 5MB limit
+  },
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed'), false);
+    }
+  }
+});
 
 // @route   POST /api/payment/generate-qr
 // @desc    Generate eSewa payment QR code for order
@@ -108,6 +135,77 @@ router.post('/verify', auth, async (req, res) => {
     }
   } catch (error) {
     console.error('Verify payment error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// @route   POST /api/payment/upload-screenshot
+// @desc    Upload payment screenshot (Guest users allowed)
+// @access  Public
+router.post('/upload-screenshot', upload.single('screenshot'), async (req, res) => {
+  try {
+    const { 
+      transactionId, 
+      amount, 
+      paymentMethod, 
+      customerName, 
+      customerEmail, 
+      customerPhone, 
+      customerAddress 
+    } = req.body;
+
+    if (!req.file) {
+      return res.status(400).json({ message: 'Screenshot file is required' });
+    }
+
+    if (!transactionId || !amount) {
+      return res.status(400).json({ 
+        message: 'Transaction ID and amount are required' 
+      });
+    }
+
+    if (!customerName || !customerEmail || !customerPhone) {
+      return res.status(400).json({ 
+        message: 'Customer details (name, email, phone) are required' 
+      });
+    }
+
+    // Store screenshot information for guest users
+    const screenshotData = {
+      filename: req.file.filename,
+      originalname: req.file.originalname,
+      path: req.file.path,
+      size: req.file.size,
+      transactionId,
+      amount: parseFloat(amount),
+      paymentMethod: paymentMethod || 'esewa',
+      uploadedAt: new Date(),
+      status: 'pending_verification', // pending_verification, verified, rejected
+      // Customer details for guest checkout
+      customer: {
+        name: customerName,
+        email: customerEmail,
+        phone: customerPhone,
+        address: customerAddress
+      }
+    };
+
+    console.log('Payment screenshot uploaded:', screenshotData);
+
+    res.json({
+      message: 'Payment screenshot uploaded successfully',
+      screenshot: {
+        filename: req.file.filename,
+        originalname: req.file.originalname,
+        path: req.file.path,
+        transactionId,
+        amount,
+        uploadedAt: screenshotData.uploadedAt,
+        status: screenshotData.status
+      }
+    });
+  } catch (error) {
+    console.error('Screenshot upload error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });

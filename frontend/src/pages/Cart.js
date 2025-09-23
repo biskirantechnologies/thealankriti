@@ -1,14 +1,13 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useCart } from '../contexts/CartContext';
-import { useAuth } from '../contexts/AuthContext';
 import { TrashIcon, MinusIcon, PlusIcon } from '@heroicons/react/24/outline';
 import { Helmet } from 'react-helmet-async';
-import { getImageWithFallback } from '../utils/api';
+import SafeImage from '../components/SafeImage';
+import { getImageUrl } from '../utils/api';
 
 const Cart = () => {
   const { cartItems = [], updateQuantity, removeFromCart, getTotalPrice, clearCart } = useCart();
-  const { user } = useAuth();
 
   const handleQuantityChange = (id, newQuantity) => {
     if (newQuantity <= 0) {
@@ -70,14 +69,32 @@ const Cart = () => {
             <section className="lg:col-span-7">
               <div className="bg-white rounded-lg shadow-sm overflow-hidden">
                 <ul className="divide-y divide-gray-200">
-                  {(cartItems || []).map((item) => (
+                  {(cartItems || []).map((item) => {
+                    // Debug logging to understand cart item structure
+                    console.log('Cart item structure:', item);
+                    console.log('Item product images:', item.product?.images);
+                    console.log('Item image:', item.image);
+                    
+                    return (
                     <li key={item.id} className="p-6">
                       <div className="flex items-center">
                         <div className="flex-shrink-0 w-24 h-24">
-                          <img
-                            className="w-full h-full object-cover rounded-md"
-                            src={getImageWithFallback(item.images?.[0], 'Product')}
-                            alt={item.name}
+                          <SafeImage
+                            src={
+                              getImageUrl(item.product?.images?.[0]?.url) || 
+                              getImageUrl(item.image) || 
+                              getImageUrl(item.product?.image) ||
+                              (item.product?.images?.[0] && typeof item.product.images[0] === 'string' ? getImageUrl(item.product.images[0]) : null)
+                            }
+                            alt={
+                              item.product?.images?.[0]?.alt || 
+                              item.product?.name || 
+                              item.name || 
+                              'Product'
+                            }
+                            className="w-full h-full object-cover rounded-md border border-gray-200"
+                            fallbackType="jewelry"
+                            onError={() => console.log('Cart image failed to load for item:', item)}
                           />
                         </div>
 
@@ -85,12 +102,20 @@ const Cart = () => {
                           <div className="flex items-start justify-between">
                             <div className="flex-1">
                               <h3 className="text-lg font-medium text-gray-900">
-                                <Link to={`/products/${item.id}`} className="hover:text-gold">
-                                  {item.name}
+                                <Link to={`/products/${item.product?._id || item.id}`} className="hover:text-gold">
+                                  {item.product?.name || item.name}
                                 </Link>
                               </h3>
-                              <p className="text-sm text-gray-500 mt-1">{item.category}</p>
-                              <p className="text-lg font-semibold text-gold mt-2">NPR {item.price?.toLocaleString()}</p>
+                              <p className="text-sm text-gray-500 mt-1">{item.product?.category || item.category}</p>
+                              {item.product?.sku && (
+                                <p className="text-xs text-gray-400 mt-1">SKU: {item.product.sku}</p>
+                              )}
+                              <p className="text-lg font-semibold text-gold mt-2">NPR {(item.product?.price || item.price)?.toLocaleString()}</p>
+                              {(item.variant || item.size) && (
+                                <p className="text-sm text-gray-600 mt-1">
+                                  {item.variant?.size || item.size || 'One Size'}
+                                </p>
+                              )}
                             </div>
 
                             <button
@@ -120,17 +145,18 @@ const Cart = () => {
 
                             <div className="text-right">
                               <p className="text-lg font-semibold text-gray-900">
-                                NPR {((item.price || 0) * item.quantity).toLocaleString()}
+                                NPR {(((item.product?.price || item.price) || 0) * item.quantity).toLocaleString()}
                               </p>
                               <p className="text-sm text-gray-500">
-                                NPR {item.price?.toLocaleString()} each
+                                NPR {(item.product?.price || item.price)?.toLocaleString()} each
                               </p>
                             </div>
                           </div>
                         </div>
                       </div>
                     </li>
-                  ))}
+                    );
+                  })}
                 </ul>
               </div>
 
@@ -175,29 +201,12 @@ const Cart = () => {
                 </div>
 
                 <div className="mt-6 space-y-4">
-                  {user ? (
-                    <Link
-                      to="/checkout"
-                      className="w-full bg-gold text-white py-3 px-4 rounded-md font-medium hover:bg-gold-dark transition-colors text-center block"
-                    >
-                      Proceed to Checkout
-                    </Link>
-                  ) : (
-                    <div className="space-y-3">
-                      <Link
-                        to="/login?redirect=/checkout"
-                        className="w-full bg-gold text-white py-3 px-4 rounded-md font-medium hover:bg-gold-dark transition-colors text-center block"
-                      >
-                        Login to Checkout
-                      </Link>
-                      <p className="text-sm text-gray-500 text-center">
-                        New customer?{' '}
-                        <Link to="/register" className="text-gold hover:text-gold-dark">
-                          Create an account
-                        </Link>
-                      </p>
-                    </div>
-                  )}
+                  <Link
+                    to="/checkout"
+                    className="w-full bg-gold text-white py-3 px-4 rounded-md font-medium hover:bg-gold-dark transition-colors text-center block"
+                  >
+                    Proceed to Checkout
+                  </Link>
 
                   <Link
                     to="/products"

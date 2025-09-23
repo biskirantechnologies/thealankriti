@@ -97,8 +97,8 @@ const validateOrder = (req, res, next) => {
         product: Joi.string().optional(), // Make optional for cases where we have productSnapshot
         productSnapshot: Joi.object({
           name: Joi.string().required(),
-          sku: Joi.string().optional(),
-          image: Joi.string().optional(),
+          sku: Joi.string().allow('').optional(),
+          image: Joi.string().allow('').optional(),
           price: Joi.number().min(0).required(),
           specifications: Joi.object().optional()
         }).optional(),
@@ -143,9 +143,12 @@ const validateOrder = (req, res, next) => {
       country: Joi.string().optional()
     }).optional(),
     payment: Joi.object({
-      method: Joi.string().valid('qr-code', 'upi', 'card', 'cod', 'bank-transfer').optional(),
+      method: Joi.string().valid('qr-code', 'upi', 'card', 'cod', 'bank-transfer', 'esewa').optional(),
       status: Joi.string().valid('pending', 'completed', 'failed').optional(),
-      transactionId: Joi.string().optional()
+      transactionId: Joi.string().optional(),
+      hasScreenshot: Joi.boolean().optional(),
+      screenshotData: Joi.object().optional(),
+      verificationStatus: Joi.string().valid('pending_verification', 'verified', 'rejected').optional()
     }).optional(),
     pricing: Joi.object({
       subtotal: Joi.number().min(0).required(),

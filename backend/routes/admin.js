@@ -121,6 +121,7 @@ router.get('/orders', adminAuth, async (req, res) => {
       limit = 20,
       status,
       search,
+      dateFilter,
       sortBy = 'createdAt',
       sortOrder = 'desc'
     } = req.query;
@@ -128,6 +129,29 @@ router.get('/orders', adminAuth, async (req, res) => {
     // Build filter
     const filter = {};
     if (status && status !== 'all') filter.status = status;
+    
+    // Handle date filter
+    if (dateFilter && dateFilter !== 'all') {
+      const now = new Date();
+      switch (dateFilter) {
+        case 'today':
+          const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+          filter.createdAt = { $gte: todayStart };
+          break;
+        case 'week':
+          const weekStart = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+          filter.createdAt = { $gte: weekStart };
+          break;
+        case 'month':
+          const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+          filter.createdAt = { $gte: monthStart };
+          break;
+        case 'year':
+          const yearStart = new Date(now.getFullYear(), 0, 1);
+          filter.createdAt = { $gte: yearStart };
+          break;
+      }
+    }
     
     if (search) {
       filter.$or = [
@@ -146,8 +170,8 @@ router.get('/orders', adminAuth, async (req, res) => {
       .sort(sortOptions)
       .skip(skip)
       .limit(parseInt(limit))
-      .populate('customer', 'firstName lastName email')
-      .select('-items.productSnapshot'); // Exclude for performance
+      .populate('customer', 'firstName lastName email');
+      // Include productSnapshot for admin order display
 
     const totalOrders = await Order.countDocuments(filter);
 
@@ -299,6 +323,36 @@ router.put('/orders/:id/status', adminAuth, async (req, res) => {
     });
   } catch (error) {
     console.error('Update order status error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// @route   DELETE /api/admin/orders/:id
+// @desc    Delete an order
+// @access  Private/Admin
+router.delete('/orders/:id', adminAuth, async (req, res) => {
+  try {
+    const order = await Order.findById(req.params.id);
+    if (!order) {
+      return res.status(404).json({ message: 'Order not found' });
+    }
+
+    // Check if order can be deleted (only allow deletion of pending/cancelled orders)
+    if (!['pending', 'cancelled'].includes(order.status)) {
+      return res.status(400).json({ 
+        message: 'Only pending or cancelled orders can be deleted' 
+      });
+    }
+
+    // Delete the order
+    await Order.findByIdAndDelete(req.params.id);
+
+    res.json({
+      message: 'Order deleted successfully',
+      orderId: req.params.id
+    });
+  } catch (error) {
+    console.error('Delete order error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });
@@ -604,10 +658,30 @@ router.post('/products', adminAuth, async (req, res) => {
       material,
       purity,
       stockQuantity,
+      stock,
       featured,
       tags,
       images
     } = req.body;
+
+    // Handle stock quantity - support both formats
+    let stockData;
+    if (stock && typeof stock === 'object' && stock.quantity !== undefined) {
+      // Frontend sends stock as object: { quantity: number }
+      stockData = {
+        quantity: stock.quantity || 0,
+        lowStockThreshold: stock.lowStockThreshold || 5,
+        status: stock.quantity > 5 ? 'in-stock' : stock.quantity > 0 ? 'low-stock' : 'out-of-stock'
+      };
+    } else {
+      // Fallback to legacy stockQuantity field
+      const quantity = stockQuantity || 0;
+      stockData = {
+        quantity: quantity,
+        lowStockThreshold: 5,
+        status: quantity > 5 ? 'in-stock' : quantity > 0 ? 'low-stock' : 'out-of-stock'
+      };
+    }
 
     // Check if SKU already exists
     if (sku) {
@@ -648,11 +722,7 @@ router.post('/products', adminAuth, async (req, res) => {
       weight: weight || 0,
       material: material || '',
       purity: purity || '',
-      stock: {
-        quantity: stockQuantity || 0,
-        lowStockThreshold: 5,
-        status: stockQuantity > 5 ? 'in-stock' : stockQuantity > 0 ? 'low-stock' : 'out-of-stock'
-      },
+      stock: stockData,
       featured: featured || false,
       tags: tags || [],
       images: processedImages,
@@ -690,6 +760,7 @@ router.put('/products/:id', adminAuth, async (req, res) => {
       material,
       purity,
       stockQuantity,
+      stock,
       featured,
       tags,
       images
@@ -747,8 +818,15 @@ router.put('/products/:id', adminAuth, async (req, res) => {
       }
     }
 
-    // Update stock if provided
-    if (stockQuantity !== undefined) {
+    // Update stock if provided - support both formats
+    if (stock && typeof stock === 'object' && stock.quantity !== undefined) {
+      // Frontend sends stock as object: { quantity: number }
+      product.stock.quantity = stock.quantity;
+      product.stock.lowStockThreshold = stock.lowStockThreshold || product.stock.lowStockThreshold || 5;
+      product.stock.status = stock.quantity > product.stock.lowStockThreshold ? 'in-stock' : 
+                           stock.quantity > 0 ? 'low-stock' : 'out-of-stock';
+    } else if (stockQuantity !== undefined) {
+      // Fallback to legacy stockQuantity field
       product.stock.quantity = stockQuantity;
       product.stock.status = stockQuantity > product.stock.lowStockThreshold ? 'in-stock' : 
                            stockQuantity > 0 ? 'low-stock' : 'out-of-stock';

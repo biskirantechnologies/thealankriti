@@ -190,6 +190,7 @@ export const adminAPI = {
       : statusData;
     return api.put(`/admin/orders/${id}/status`, requestData);
   },
+  deleteOrder: (id) => api.delete(`/admin/orders/${id}`),
   cancelOrder: (id, reason) => api.put(`/admin/orders/${id}/cancel`, { reason }),
   getProducts: (params = {}) => api.get('/admin/products', { params }),
   getProduct: (id) => api.get(`/admin/products/${id}`),

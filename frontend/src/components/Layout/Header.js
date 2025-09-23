@@ -128,13 +128,8 @@ const Header = () => {
                 )}
               </div>
             ) : (
+              // No login links - direct checkout system
               <div className="hidden sm:flex items-center space-x-4">
-                <Link
-                  to="/login"
-                  className="text-sm uppercase tracking-[0.1em] text-gray-600 hover:text-gray-900 font-medium transition-colors"
-                >
-                  Login
-                </Link>
                 <Link
                   to="/admin-login"
                   className="text-xs uppercase tracking-[0.1em] text-gray-500 hover:text-gray-700 font-medium transition-colors"
@@ -196,13 +191,7 @@ const Header = () => {
             ))}
             {!user && (
               <>
-                <Link
-                  to="/login"
-                  className="block text-sm uppercase tracking-[0.1em] text-gray-600 hover:text-gray-900 font-medium transition-colors py-2"
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  Login
-                </Link>
+                {/* No login link for mobile - direct checkout system */}
                 <Link
                   to="/admin-login"
                   className="block text-xs uppercase tracking-[0.1em] text-gray-500 hover:text-gray-700 font-medium transition-colors py-2"

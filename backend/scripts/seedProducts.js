@@ -30,8 +30,11 @@ const sampleProducts = [
     purity: "18K",
     gemstones: [],
     sizes: ["6", "7", "8", "9", "10"],
-    inStock: true,
-    stockQuantity: 15,
+    stock: {
+      quantity: 15,
+      lowStockThreshold: 5,
+      status: 'in-stock'
+    },
     featured: true,
     tags: ["gold", "ring", "rose", "elegant", "bridal"],
     metadata: {
@@ -69,8 +72,11 @@ const sampleProducts = [
         cut: "Round"
       }
     ],
-    inStock: true,
-    stockQuantity: 8,
+    stock: {
+      quantity: 8,
+      lowStockThreshold: 3,
+      status: 'in-stock'
+    },
     featured: true,
     tags: ["diamond", "earrings", "white gold", "classic", "studs"]
   },
@@ -101,8 +107,11 @@ const sampleProducts = [
         origin: "Freshwater"
       }
     ],
-    inStock: true,
-    stockQuantity: 12,
+    stock: {
+      quantity: 12,
+      lowStockThreshold: 5,
+      status: 'in-stock'
+    },
     featured: true,
     tags: ["pearl", "necklace", "pendant", "gold", "elegant"]
   },
@@ -128,8 +137,11 @@ const sampleProducts = [
     purity: "925",
     gemstones: [],
     sizes: ["Small", "Medium", "Large"],
-    inStock: true,
-    stockQuantity: 20,
+    stock: {
+      quantity: 20,
+      lowStockThreshold: 8,
+      status: 'in-stock'
+    },
     featured: false,
     tags: ["silver", "bracelet", "charm", "adjustable"]
   },
@@ -161,8 +173,11 @@ const sampleProducts = [
         origin: "Colombian"
       }
     ],
-    inStock: true,
-    stockQuantity: 5,
+    stock: {
+      quantity: 2,
+      lowStockThreshold: 5,
+      status: 'low-stock'
+    },
     featured: true,
     tags: ["emerald", "earrings", "gold", "drop", "gemstone"]
   },
@@ -188,8 +203,11 @@ const sampleProducts = [
     purity: "22K",
     gemstones: [],
     sizes: ["16 inches", "18 inches", "20 inches", "22 inches"],
-    inStock: true,
-    stockQuantity: 25,
+    stock: {
+      quantity: 0,
+      lowStockThreshold: 10,
+      status: 'out-of-stock'
+    },
     featured: false,
     tags: ["gold", "chain", "necklace", "classic", "layering"]
   }
@@ -197,8 +215,8 @@ const sampleProducts = [
 
 async function seedProducts() {
   try {
-    // Connect to MongoDB
-    await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/ukriti-jewells');
+    // Connect to MongoDB using the database config
+    require('../config/database');
     console.log('Connected to MongoDB');
 
     // Clear existing products

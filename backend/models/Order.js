@@ -9,7 +9,7 @@ const orderSchema = new mongoose.Schema({
   customer: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    required: true
+    required: false // Allow null for guest users
   },
   customerInfo: {
     email: {
@@ -27,7 +27,12 @@ const orderSchema = new mongoose.Schema({
     phone: String,
     userId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'User'
+      ref: 'User',
+      required: false // Optional for guest users
+    },
+    isGuest: {
+      type: Boolean,
+      default: false
     }
   },
   items: [{
@@ -151,7 +156,7 @@ const orderSchema = new mongoose.Schema({
   payment: {
     method: {
       type: String,
-      enum: ['qr-code', 'upi', 'card', 'bank-transfer', 'cod'],
+      enum: ['qr-code', 'upi', 'card', 'bank-transfer', 'cod', 'esewa'],
       required: true
     },
     status: {
@@ -162,7 +167,18 @@ const orderSchema = new mongoose.Schema({
     transactionId: String,
     paidAt: Date,
     qrCode: String,
-    upiId: String
+    upiId: String,
+    screenshot: {
+      filename: String,
+      originalname: String,
+      path: String,
+      uploadedAt: Date,
+      status: {
+        type: String,
+        enum: ['pending_verification', 'verified', 'rejected'],
+        default: 'pending_verification'
+      }
+    }
   },
   status: {
     type: String,

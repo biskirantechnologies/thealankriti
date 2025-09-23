@@ -11,9 +11,9 @@ const { sendOrderNotificationWhatsApp } = require('../utils/whatsappService');
 const router = express.Router();
 
 // @route   POST /api/orders
-// @desc    Create new order
-// @access  Private
-router.post('/', auth, validateOrder, async (req, res) => {
+// @desc    Create new order (Guest users allowed)
+// @access  Public
+router.post('/', validateOrder, async (req, res) => {
   try {
     const { 
       items, 
@@ -101,15 +101,16 @@ router.post('/', auth, validateOrder, async (req, res) => {
       orderPricing.total = orderPricing.subtotal + orderPricing.tax + orderPricing.shippingCost - orderPricing.discount;
     }
 
-    // Create order
+    // Create order (support both authenticated users and guests)
     const order = new Order({
-      customer: req.user.id,
+      customer: req.user?.id || null, // Optional for guest users
       customerInfo: {
-        email: customerInfo?.email || req.user.email,
-        firstName: customerInfo?.firstName || req.user.firstName,
-        lastName: customerInfo?.lastName || req.user.lastName,
-        phone: customerInfo?.phone || req.user.phone,
-        userId: req.user.id
+        email: customerInfo?.email || req.user?.email,
+        firstName: customerInfo?.firstName || req.user?.firstName,
+        lastName: customerInfo?.lastName || req.user?.lastName,
+        phone: customerInfo?.phone || req.user?.phone,
+        userId: req.user?.id || customerInfo?.userId || null,
+        isGuest: customerInfo?.isGuest || !req.user
       },
       items: processedItems,
       shippingAddress: {
@@ -135,7 +136,39 @@ router.post('/', auth, validateOrder, async (req, res) => {
       payment: {
         method: payment?.method || 'qr-code',
         status: payment?.status || 'pending',
-        transactionId: payment?.transactionId || `UJ${Date.now()}`
+        transactionId: payment?.transactionId || `UJ${Date.now()}`,
+        // Include screenshot data if available
+        ...(payment?.hasScreenshot && payment?.screenshotData && (() => {
+          console.log('🔍 Processing screenshot data:', JSON.stringify(payment.screenshotData, null, 2));
+          
+          // Handle different possible structures
+          let screenshotInfo = null;
+          
+          // Structure 1: payment.screenshotData.screenshot (nested)
+          if (payment.screenshotData.screenshot) {
+            screenshotInfo = payment.screenshotData.screenshot;
+          }
+          // Structure 2: payment.screenshotData (direct)
+          else if (payment.screenshotData.filename) {
+            screenshotInfo = payment.screenshotData;
+          }
+          
+          if (screenshotInfo) {
+            console.log('✅ Found screenshot info:', screenshotInfo);
+            return {
+              screenshot: {
+                filename: screenshotInfo.filename,
+                originalname: screenshotInfo.originalname || 'payment_screenshot',
+                path: screenshotInfo.path,
+                uploadedAt: new Date(),
+                status: payment.verificationStatus || 'pending_verification'
+              }
+            };
+          }
+          
+          console.log('❌ No valid screenshot info found');
+          return {};
+        })())
       },
       notes: notes || {},
       status: 'pending',

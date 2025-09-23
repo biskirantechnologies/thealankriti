@@ -209,19 +209,32 @@ const AdminProductManager = () => {
         return;
       }
       
+      // Clean up specifications - only include fields that have values
+      const specifications = {};
+      if (productForm.material) specifications.metal = productForm.material;
+      if (productForm.purity) specifications.purity = productForm.purity;
+      if (productForm.weight) {
+        specifications.weight = {
+          value: parseFloat(productForm.weight),
+          unit: 'grams'
+        };
+      }
+
       const productData = {
-        ...productForm,
+        name: productForm.name,
+        description: productForm.description,
+        shortDescription: productForm.shortDescription || '',
+        category: productForm.category,
+        subCategory: productForm.subCategory || '',
         price: parseFloat(productForm.price),
         originalPrice: productForm.originalPrice ? parseFloat(productForm.originalPrice) : undefined,
-        weight: parseFloat(productForm.weight) || 0,
-        stockQuantity: parseInt(productForm.stockQuantity) || 0,
-        tags: productForm.tags ? productForm.tags.split(',').map(tag => tag.trim()).filter(tag => tag) : [],
-        sku: productForm.sku || `PROD_${Date.now()}`,
-        material: productForm.material || '',
-        purity: productForm.purity || '',
-        shortDescription: productForm.shortDescription || '',
-        subCategory: productForm.subCategory || '',
         discount: productForm.discount || 0,
+        sku: productForm.sku || `PROD_${Date.now()}`,
+        specifications: Object.keys(specifications).length > 0 ? specifications : undefined,
+        stock: {
+          quantity: parseInt(productForm.stockQuantity) || 0
+        },
+        tags: productForm.tags ? productForm.tags.split(',').map(tag => tag.trim()).filter(tag => tag) : [],
         featured: productForm.featured || false,
         images: productForm.images || []
       };
@@ -267,13 +280,35 @@ const AdminProductManager = () => {
     e.preventDefault();
     try {
       setLoading(true);
+      
+      // Clean up specifications - only include fields that have values
+      const specifications = {};
+      if (productForm.material) specifications.metal = productForm.material;
+      if (productForm.purity) specifications.purity = productForm.purity;
+      if (productForm.weight) {
+        specifications.weight = {
+          value: parseFloat(productForm.weight),
+          unit: 'grams'
+        };
+      }
+
       const productData = {
-        ...productForm,
+        name: productForm.name,
+        description: productForm.description,
+        shortDescription: productForm.shortDescription || '',
+        category: productForm.category,
+        subCategory: productForm.subCategory || '',
         price: parseFloat(productForm.price),
         originalPrice: productForm.originalPrice ? parseFloat(productForm.originalPrice) : undefined,
-        weight: parseFloat(productForm.weight) || 0,
-        stockQuantity: parseInt(productForm.stockQuantity) || 0,
-        tags: productForm.tags.split(',').map(tag => tag.trim()).filter(tag => tag)
+        discount: productForm.discount || 0,
+        sku: productForm.sku,
+        specifications: Object.keys(specifications).length > 0 ? specifications : undefined,
+        stock: {
+          quantity: parseInt(productForm.stockQuantity) || 0
+        },
+        tags: productForm.tags ? productForm.tags.split(',').map(tag => tag.trim()).filter(tag => tag) : [],
+        featured: productForm.featured || false,
+        images: productForm.images || []
       };
       
       await adminAPI.updateProduct(selectedProduct._id, productData);
@@ -340,9 +375,9 @@ const AdminProductManager = () => {
       originalPrice: product.originalPrice?.toString() || '',
       discount: product.discount || 0,
       sku: product.sku || '',
-      weight: product.weight?.toString() || '',
-      material: product.material || '',
-      purity: product.purity || '',
+      weight: product.specifications?.weight?.value?.toString() || product.weight?.toString() || '',
+      material: product.specifications?.metal || product.material || '',
+      purity: product.specifications?.purity || product.purity || '',
       stockQuantity: (product.stock?.quantity || product.stockQuantity || 0).toString(),
       featured: product.featured || false,
       tags: product.tags?.join(', ') || '',

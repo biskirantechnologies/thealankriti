@@ -16,29 +16,11 @@ import { HeartIcon as HeartSolidIcon, StarIcon as StarSolidIcon } from '@heroico
 import { Helmet } from 'react-helmet-async';
 import { useCart } from '../contexts/CartContext';
 import { useAuth } from '../contexts/AuthContext';
-import { useUserTracking, useComponentTracking } from '../hooks/useUserTracking';
+import { useUserTracking } from '../hooks/useUserTracking';
 import { getImageUrl, getImageWithFallback } from '../utils/api';
+import { productsAPI, userAPI } from '../services/api';
+import SafeImage from '../components/SafeImage';
 import toast from 'react-hot-toast';
-
-// Helper function to get proper image URL
-const getImageUrl_Product = (image) => {
-  if (!image) {
-    return 'https://images.unsplash.com/photo-1573408301185-9146fe634ad0?w=400&h=400&fit=crop';
-  }
-
-  // If it's a string (file path)
-  if (typeof image === 'string') {
-    return getImageUrl(image);
-  }
-  
-  // If it's an object with url property
-  if (typeof image === 'object' && image.url) {
-    return getImageUrl(image.url);
-  }
-  
-  // Fallback to placeholder
-  return getImageWithFallback(null, 'Product');
-};
 
 const ProductDetail = () => {
   const { id } = useParams();
@@ -54,7 +36,6 @@ const ProductDetail = () => {
     trackPageView,
     trackAction
   } = useUserTracking();
-  const { trackComponentAction } = useComponentTracking('ProductDetail');
   
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -65,103 +46,132 @@ const ProductDetail = () => {
   const [showImageZoom, setShowImageZoom] = useState(false);
   const [activeTab, setActiveTab] = useState('description');
 
-  // Mock product data - in real app, this would come from API
+  // Fetch product data from backend
   useEffect(() => {
     const fetchProduct = async () => {
-      setLoading(true);
-      // Simulate API call
-      setTimeout(() => {
-        const mockProduct = {
-          id: id,
-          name: 'Elegant Diamond Necklace',
-          price: 45999,
-          originalPrice: 52999,
-          discount: 13,
-          rating: 4.8,
-          reviewsCount: 324,
-          sku: 'UJ-DN-001',
-          category: 'Necklaces',
-          subcategory: 'Diamond Necklaces',
-          metal: 'White Gold',
-          purity: '18K',
-          weight: '15.2g',
-          gemstone: 'Diamond',
-          certification: 'GIA Certified',
-          inStock: true,
-          stockCount: 5,
-          images: [
-            'https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=800',
-            'https://images.unsplash.com/photo-1506630448388-4e683c67ddb0?w=800',
-            'https://images.unsplash.com/photo-1573408301185-9146fe634ad0?w=800',
-            'https://images.unsplash.com/photo-1596944924591-1aa7b83b7b3d?w=800'
-          ],
-          sizes: ['16 inches', '18 inches', '20 inches'],
+      try {
+        setLoading(true);
+        
+        // Fetch product data from backend
+        const response = await productsAPI.getProduct(id);
+        const productData = response.data;
+        
+        if (!productData) {
+          setProduct(null);
+          return;
+        }
+
+        // Transform backend data to frontend format
+        // Build specifications object dynamically - only include fields with data
+        const specs = {};
+        
+        // Add specifications only if they have meaningful values
+        if (productData.specifications?.metal) {
+          specs['Metal Type'] = productData.specifications.metal.charAt(0).toUpperCase() + 
+                               productData.specifications.metal.slice(1).replace('-', ' ');
+        }
+        
+        if (productData.specifications?.purity) {
+          specs['Purity'] = productData.specifications.purity.toUpperCase();
+        }
+        
+        if (productData.specifications?.weight?.value) {
+          specs['Weight'] = `${productData.specifications.weight.value} ${productData.specifications.weight.unit || 'grams'}`;
+        }
+        
+        if (productData.specifications?.gemstone && productData.specifications.gemstone !== 'none') {
+          specs['Gemstone'] = productData.specifications.gemstone.charAt(0).toUpperCase() + 
+                             productData.specifications.gemstone.slice(1);
+        }
+        
+        // Always show these essential fields
+        specs['Category'] = productData.category.charAt(0).toUpperCase() + productData.category.slice(1);
+        specs['SKU'] = productData.sku;
+        
+        // Show stock status with better formatting
+        const stockStatus = productData.stock?.status || 'unknown';
+        specs['Stock Status'] = stockStatus.split('-').map(word => 
+          word.charAt(0).toUpperCase() + word.slice(1)
+        ).join(' ');
+
+        const transformedProduct = {
+          id: productData._id,
+          name: productData.name,
+          price: productData.price,
+          originalPrice: productData.originalPrice || null,
+          description: productData.description,
+          shortDescription: productData.shortDescription || '',
+          specifications: specs,
+          images: productData.images || [],
+          sizes: productData.variants?.map(variant => variant.value) || [],
+          // Stock information from backend
+          inStock: productData.stock?.status === 'in-stock' || productData.stock?.status === 'low-stock',
+          stockCount: productData.stock?.quantity || 0,
+          stockStatus: productData.stock?.status || 'out-of-stock',
+          lowStockThreshold: productData.stock?.lowStockThreshold || 5,
           features: [
-            'Handcrafted by expert artisans',
-            'Premium diamond quality (VS1-VS2)',
-            'Lifetime warranty on gold',
-            'Free resizing within 30 days',
-            'BIS Hallmark certified'
-          ],
-          description: 'This exquisite diamond necklace features carefully selected diamonds set in premium 18K white gold. Each piece is handcrafted by our master artisans with attention to every detail. The elegant design makes it perfect for special occasions and can be treasured for generations.',
-          specifications: {
-            'Metal Type': '18K White Gold',
-            'Total Weight': '15.2 grams',
-            'Diamond Count': '47 pieces',
-            'Diamond Weight': '2.5 carats',
-            'Diamond Color': 'F-G',
-            'Diamond Clarity': 'VS1-VS2',
-            'Setting Type': 'Prong Setting',
-            'Chain Length': 'Adjustable 16-20 inches'
-          },
+            'Handcrafted with precision and care',
+            'Premium quality materials',
+            'Elegant and timeless design',
+            'Perfect for special occasions',
+            'Comes with authenticity certificate'
+          ], // Default features
           care: [
             'Store in a soft jewelry box to prevent scratches',
             'Clean with mild soap and water using a soft brush',
             'Avoid contact with perfumes and chemicals',
             'Remove before swimming or exercising',
             'Professional cleaning recommended every 6 months'
-          ]
+          ] // Default care instructions
         };
-        setProduct(mockProduct);
-        setSelectedSize(mockProduct.sizes[0]);
-        setLoading(false);
+        
+        setProduct(transformedProduct);
+        
+        // Set default selected size
+        if (transformedProduct.sizes?.length > 0) {
+          setSelectedSize(transformedProduct.sizes[0]);
+        }
         
         // Track product view
         trackProductView(id, {
-          productName: mockProduct.name,
-          price: mockProduct.price,
-          category: 'necklace',
-          sku: mockProduct.sku
+          productName: transformedProduct.name,
+          price: transformedProduct.price,
+          category: transformedProduct.category,
+          sku: transformedProduct.sku
         });
         
         // Track page view
         trackPageView(`product-detail-${id}`, {
           productId: id,
-          productName: mockProduct.name,
-          price: mockProduct.price
+          productName: transformedProduct.name,
+          price: transformedProduct.price
         });
-      }, 1000);
+        
+      } catch (error) {
+        console.error('Error fetching product:', error);
+        setProduct(null);
+        toast.error('Failed to load product details. Please try again.');
+      } finally {
+        setLoading(false);
+      }
     };
 
-    fetchProduct();
+    if (id) {
+      fetchProduct();
+    }
   }, [id, trackProductView, trackPageView]);
 
   const handleAddToCart = () => {
-    if (!selectedSize) {
+    // Only require size selection if there are multiple sizes
+    if (product.sizes && product.sizes.length > 1 && !selectedSize) {
       toast.error('Please select a size');
       return;
     }
 
-    const cartItem = {
-      id: product.id,
-      name: product.name,
-      price: product.price,
-      image: getImageUrl_Product(product.images?.[0]),
-      size: selectedSize,
-      quantity: quantity
-    };
+    // Pass the full product object with variant information
+    const variant = selectedSize && selectedSize !== 'One Size' ? { size: selectedSize } : null;
 
-    addToCart(cartItem);
+    addToCart(product, quantity, variant);
 
     // Track cart action
     trackCartAction('add', {
@@ -169,7 +179,7 @@ const ProductDetail = () => {
       name: product.name,
       price: product.price,
       quantity: quantity,
-      size: selectedSize
+      size: selectedSize || 'One Size'
     });
 
     toast.success('Added to cart!');
@@ -184,25 +194,61 @@ const ProductDetail = () => {
       productName: product.name,
       price: product.price,
       quantity: quantity,
-      size: selectedSize
+      size: selectedSize || 'One Size'
     });
     
     navigate('/checkout');
   };
 
-  const toggleWishlist = () => {
+  // Check if product is in wishlist on load
+  useEffect(() => {
+    const checkWishlistStatus = async () => {
+      if (user && product) {
+        try {
+          const response = await userAPI.getWishlist();
+          const wishlistItems = response.data || [];
+          const isInWishlist = wishlistItems.some(item => item.product?._id === product.id || item.product === product.id);
+          setIsWishlisted(isInWishlist);
+        } catch (error) {
+          console.error('Error checking wishlist status:', error);
+          // Don't show error toast for wishlist check failures
+        }
+      }
+    };
+
+    if (user && product) {
+      checkWishlistStatus();
+    }
+  }, [user, product]);
+
+  const toggleWishlist = async () => {
     if (!user) {
       toast.error('Please login to add to wishlist');
       return;
     }
 
-    const newWishlistState = !isWishlisted;
-    setIsWishlisted(newWishlistState);
-    
-    // Track wishlist action
-    trackWishlistAction(newWishlistState ? 'add' : 'remove', product.id);
-    
-    toast.success(newWishlistState ? 'Added to wishlist!' : 'Removed from wishlist!');
+    if (!product) return;
+
+    try {
+      const newWishlistState = !isWishlisted;
+      
+      if (newWishlistState) {
+        await userAPI.addToWishlist(product.id);
+        toast.success('Added to wishlist!');
+      } else {
+        await userAPI.removeFromWishlist(product.id);
+        toast.success('Removed from wishlist!');
+      }
+      
+      setIsWishlisted(newWishlistState);
+      
+      // Track wishlist action
+      trackWishlistAction(newWishlistState ? 'add' : 'remove', product.id);
+      
+    } catch (error) {
+      console.error('Error updating wishlist:', error);
+      toast.error('Failed to update wishlist. Please try again.');
+    }
   };
 
   const shareProduct = () => {
@@ -276,7 +322,7 @@ const ProductDetail = () => {
         <meta name="description" content={product?.shortDescription || product?.description || 'Beautiful jewelry piece from TheAlankriti'} />
         <meta property="og:title" content={`${product?.name || 'Product'} - TheAlankriti`} />
         <meta property="og:description" content={product?.shortDescription || product?.description} />
-        <meta property="og:image" content={getImageUrl_Product(product?.images?.[0])} />
+        <meta property="og:image" content={getImageUrl(product?.images?.[0]) || getImageWithFallback(null, product?.name)} />
       </Helmet>
       
       <div className="min-h-screen bg-gray-50 py-12">
@@ -320,7 +366,7 @@ const ProductDetail = () => {
               {/* Image selector */}
               <div className="hidden mt-6 w-full max-w-2xl mx-auto sm:block lg:max-w-none">
                 <div className="grid grid-cols-4 gap-6">
-                  {product.images && product.images.map((image, index) => (
+                  {product.images && product.images.length > 0 && product.images.map((image, index) => (
                     <motion.button
                       key={index}
                       whileHover={{ scale: 1.05 }}
@@ -330,10 +376,11 @@ const ProductDetail = () => {
                         index === selectedImage ? 'ring-2 ring-primary-500' : 'ring-1 ring-gray-300'
                       }`}
                     >
-                      <img
-                        src={getImageUrl_Product(image)}
-                        alt={`${product.name} ${index + 1}`}
+                      <SafeImage
+                        src={getImageUrl(image?.url)}
+                        alt={image?.alt || `${product.name} ${index + 1}`}
                         className="w-full h-full object-cover object-center"
+                        fallbackType="jewelry"
                       />
                     </motion.button>
                   ))}
@@ -349,11 +396,12 @@ const ProductDetail = () => {
                   transition={{ duration: 0.3 }}
                   className="relative h-full bg-white rounded-lg overflow-hidden group"
                 >
-                  <img
-                    src={getImageUrl_Product(product.images?.[selectedImage])}
-                    alt={product.name}
+                  <SafeImage
+                    src={getImageUrl(product.images?.[selectedImage]?.url)}
+                    alt={product.images?.[selectedImage]?.alt || product.name}
                     className="w-full h-full object-cover object-center cursor-zoom-in"
                     onClick={() => setShowImageZoom(true)}
+                    fallbackType="jewelry"
                   />
                   <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition-all duration-300 flex items-center justify-center">
                     <MagnifyingGlassPlusIcon className="h-8 w-8 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
@@ -422,23 +470,30 @@ const ProductDetail = () => {
                   <span className="text-3xl font-bold text-gray-900">
                     NPR {product.price.toLocaleString()}
                   </span>
-                  {product.originalPrice && (
+                  {product.originalPrice && product.originalPrice > product.price && (
                     <span className="text-xl text-gray-500 line-through">
                       NPR {product.originalPrice.toLocaleString()}
                     </span>
                   )}
                 </div>
-                <p className="text-sm text-green-600 mt-1">
-                  You save NPR {(product.originalPrice - product.price).toLocaleString()}
-                </p>
+                {product.originalPrice && product.originalPrice > product.price && (
+                  <p className="text-sm text-green-600 mt-1">
+                    You save NPR {(product.originalPrice - product.price).toLocaleString()}
+                  </p>
+                )}
               </div>
 
               {/* Stock status */}
               <div className="mt-4">
-                {product.inStock ? (
+                {product.stockStatus === 'in-stock' ? (
                   <p className="text-green-600 text-sm flex items-center">
                     <span className="w-2 h-2 bg-green-500 rounded-full mr-2"></span>
-                    In stock ({product.stockCount} left)
+                    In stock ({product.stockCount} available)
+                  </p>
+                ) : product.stockStatus === 'low-stock' ? (
+                  <p className="text-yellow-600 text-sm flex items-center">
+                    <span className="w-2 h-2 bg-yellow-500 rounded-full mr-2"></span>
+                    Low stock - Only {product.stockCount} left!
                   </p>
                 ) : (
                   <p className="text-red-600 text-sm flex items-center">
@@ -448,25 +503,27 @@ const ProductDetail = () => {
                 )}
               </div>
 
-              {/* Size selector */}
-              <div className="mt-8">
-                <h3 className="text-lg font-medium text-gray-900">Size</h3>
-                <div className="mt-4 grid grid-cols-3 gap-3">
-                  {product.sizes.map((size) => (
-                    <button
-                      key={size}
-                      onClick={() => setSelectedSize(size)}
-                      className={`py-3 px-4 border rounded-md text-sm font-medium ${
-                        selectedSize === size
-                          ? 'border-primary-500 bg-primary-50 text-primary-700'
-                          : 'border-gray-300 bg-white text-gray-900 hover:bg-gray-50'
-                      }`}
-                    >
-                      {size}
-                    </button>
-                  ))}
+              {/* Size selector - only show if there are multiple sizes */}
+              {product.sizes && product.sizes.length > 1 && (
+                <div className="mt-8">
+                  <h3 className="text-lg font-medium text-gray-900">Size</h3>
+                  <div className="mt-4 grid grid-cols-3 gap-3">
+                    {(product.sizes || []).map((size) => (
+                      <button
+                        key={size}
+                        onClick={() => setSelectedSize(size)}
+                        className={`py-3 px-4 border rounded-md text-sm font-medium ${
+                          selectedSize === size
+                            ? 'border-primary-500 bg-primary-50 text-primary-700'
+                            : 'border-gray-300 bg-white text-gray-900 hover:bg-gray-50'
+                        }`}
+                      >
+                        {size}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Quantity selector */}
               <div className="mt-8">
@@ -494,17 +551,17 @@ const ProductDetail = () => {
               <div className="mt-8 space-y-4">
                 <button
                   onClick={handleBuyNow}
-                  disabled={!product.inStock}
+                  disabled={product.stockStatus === 'out-of-stock'}
                   className="w-full bg-primary-600 border border-transparent rounded-md py-3 px-8 flex items-center justify-center text-base font-medium text-white hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Buy Now
+                  {product.stockStatus === 'out-of-stock' ? 'Out of Stock' : 'Buy Now'}
                 </button>
                 <button
                   onClick={handleAddToCart}
-                  disabled={!product.inStock}
+                  disabled={product.stockStatus === 'out-of-stock'}
                   className="w-full bg-white border border-primary-600 rounded-md py-3 px-8 flex items-center justify-center text-base font-medium text-primary-600 hover:bg-primary-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Add to Cart
+                  {product.stockStatus === 'out-of-stock' ? 'Out of Stock' : 'Add to Cart'}
                 </button>
               </div>
 
@@ -564,7 +621,7 @@ const ProductDetail = () => {
                       <div className="mt-6">
                         <h4 className="font-semibold text-gray-900 mb-3">Key Features:</h4>
                         <ul className="space-y-2">
-                          {product.features.map((feature, index) => (
+                          {(product.features || []).map((feature, index) => (
                             <li key={index} className="flex items-start">
                               <span className="w-2 h-2 bg-primary-500 rounded-full mt-2 mr-3 flex-shrink-0"></span>
                               <span className="text-gray-700">{feature}</span>
@@ -577,12 +634,24 @@ const ProductDetail = () => {
 
                   {activeTab === 'specifications' && (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      {Object.entries(product.specifications).map(([key, value]) => (
-                        <div key={key} className="flex justify-between py-3 border-b border-gray-200">
-                          <span className="font-medium text-gray-900">{key}:</span>
-                          <span className="text-gray-700">{value}</span>
+                      {Object.keys(product.specifications).length > 0 ? (
+                        Object.entries(product.specifications).map(([key, value]) => (
+                          <div key={key} className="flex justify-between py-3 border-b border-gray-200">
+                            <span className="font-medium text-gray-900">{key}:</span>
+                            <span className="text-gray-700">{value}</span>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="col-span-2 text-center py-8">
+                          <div className="text-gray-400 mb-2">
+                            <svg className="w-12 h-12 mx-auto" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M4 4a2 2 0 012-2h8a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 0v12h8V4H6z" clipRule="evenodd" />
+                            </svg>
+                          </div>
+                          <p className="text-gray-500">No detailed specifications available for this product.</p>
+                          <p className="text-sm text-gray-400 mt-1">Please contact us for more information.</p>
                         </div>
-                      ))}
+                      )}
                     </div>
                   )}
 
@@ -590,7 +659,7 @@ const ProductDetail = () => {
                     <div>
                       <h4 className="font-semibold text-gray-900 mb-4">Care Instructions:</h4>
                       <ul className="space-y-3">
-                        {product.care.map((instruction, index) => (
+                        {(product.care || []).map((instruction, index) => (
                           <li key={index} className="flex items-start">
                             <span className="w-2 h-2 bg-primary-500 rounded-full mt-2 mr-3 flex-shrink-0"></span>
                             <span className="text-gray-700">{instruction}</span>
@@ -629,13 +698,14 @@ const ProductDetail = () => {
               >
                 ×
               </button>
-              <img
-                src={getImageUrl_Product(product.images?.[selectedImage])}
-                alt={product.name}
+              <SafeImage
+                src={getImageUrl(product.images?.[selectedImage]?.url)}
+                alt={product.images?.[selectedImage]?.alt || product.name}
                 className="max-w-full max-h-full object-contain"
+                fallbackType="jewelry"
               />
               <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-2">
-                {product.images && product.images.map((_, index) => (
+                {product.images && product.images.length > 0 && product.images.map((_, index) => (
                   <button
                     key={index}
                     onClick={() => setSelectedImage(index)}

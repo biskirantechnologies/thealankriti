@@ -48,6 +48,19 @@ const loadCartFromStorage = () => {
     const savedCart = localStorage.getItem('cart');
     if (savedCart) {
       const parsedCart = JSON.parse(savedCart);
+      
+      // Check if cart items have the new structure (with product object)
+      const hasValidStructure = parsedCart.items?.every(item => 
+        item.product && typeof item.product === 'object'
+      );
+      
+      // If old structure, clear the cart to avoid compatibility issues
+      if (!hasValidStructure && parsedCart.items?.length > 0) {
+        console.log('Old cart structure detected, clearing cart for compatibility');
+        localStorage.removeItem('cart');
+        return null;
+      }
+      
       // Ensure the parsed cart has all required properties
       return {
         items: parsedCart.items || [],

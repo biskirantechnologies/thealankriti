@@ -13,13 +13,15 @@ import {
 import { useCart } from '../contexts/CartContext';
 import { useAuth } from '../contexts/AuthContext';
 import { ordersAPI, paymentAPI } from '../services/api';
-import QRCode from 'qrcode.react';
+import { getImageUrl } from '../utils/api';
+import SafeImage from '../components/SafeImage';
+
 import toast from 'react-hot-toast';
 
 const Checkout = () => {
   const navigate = useNavigate();
   const { cartItems = [], clearCart, getTotalPrice } = useCart();
-  const { user } = useAuth();
+  const { user } = useAuth(); // Optional - for logged in users
   
   const [currentStep, setCurrentStep] = useState(1);
   const [paymentMethod, setPaymentMethod] = useState('esewa');
@@ -28,6 +30,11 @@ const Checkout = () => {
   const [paymentStatus, setPaymentStatus] = useState('pending'); // pending, processing, success, failed
   const [isLoading, setIsLoading] = useState(false);
   const [codConfirmed, setCodConfirmed] = useState(false);
+  const [paymentScreenshot, setPaymentScreenshot] = useState(null);
+  const [screenshotPreview, setScreenshotPreview] = useState('');
+  const [isUploadingScreenshot, setIsUploadingScreenshot] = useState(false);
+  const [orderSubmitted, setOrderSubmitted] = useState(false); // Track if order was successfully submitted
+  const [isScreenshotSubmission, setIsScreenshotSubmission] = useState(false);
   
   const [shippingInfo, setShippingInfo] = useState({
     firstName: user?.firstName || '',
@@ -74,15 +81,17 @@ const Checkout = () => {
   ];
 
   useEffect(() => {
-    if (!user) {
-      toast.error('Please login to continue');
-      navigate('/login', { state: { from: { pathname: '/checkout' } } });
+    // Don't redirect if order was successfully submitted - let user control navigation
+    if (orderSubmitted) {
+      return;
     }
+    
+    // Guests can checkout without login
     if (!cartItems || cartItems.length === 0) {
       toast.error('Your cart is empty');
       navigate('/products');
     }
-  }, [user, cartItems, navigate]);
+  }, [cartItems, navigate, orderSubmitted]);
 
   const handleInputChange = (e) => {
     setShippingInfo({
@@ -118,8 +127,8 @@ const Checkout = () => {
     }
   };
 
-  const generateQRPayment = () => {
-    // Generate eSewa payment QR code
+  const generatePaymentData = () => {
+    // Generate eSewa payment data
     const paymentData = {
       esewaId: '9765723517',
       payeeName: 'TheAlankriti',
@@ -128,16 +137,136 @@ const Checkout = () => {
       note: `Order payment for TheAlankriti`,
       currency: 'NPR'
     };
-
-    // eSewa payment string format
-    const esewaString = `esewa://pay?scd=${paymentData.esewaId}&pn=${paymentData.payeeName}&am=${paymentData.amount}&cu=${paymentData.currency}&tr=${paymentData.transactionId}&tn=${paymentData.note}`;
     
-    setQrPaymentData({
-      ...paymentData,
-      qrString: esewaString
-    });
+    setQrPaymentData(paymentData);
     
     return paymentData;
+  };
+
+  const handleScreenshotUpload = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please upload a valid image file');
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image size should be less than 5MB');
+      return;
+    }
+
+    setPaymentScreenshot(file);
+    
+    // Create preview
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setScreenshotPreview(e.target.result);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const submitPaymentScreenshot = async () => {
+    if (!paymentScreenshot) {
+      toast.error('Please upload a payment screenshot');
+      return;
+    }
+
+    // Validate required shipping information
+    if (!shippingInfo.firstName || !shippingInfo.lastName || !shippingInfo.email || !shippingInfo.phone) {
+      toast.error('Please fill in all required shipping information');
+      return;
+    }
+
+    setIsUploadingScreenshot(true);
+    
+    try {
+      const formData = new FormData();
+      formData.append('screenshot', paymentScreenshot);
+      
+      // Generate a transaction ID if not available
+      const transactionId = qrPaymentData?.transactionId || `TXN-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      formData.append('transactionId', transactionId);
+      
+      // Calculate total from cart
+      const totalAmount = getTotalPrice();
+      formData.append('amount', totalAmount);
+      formData.append('paymentMethod', paymentMethod);
+      
+      // Add customer details for guest checkout
+      formData.append('customerName', `${shippingInfo.firstName} ${shippingInfo.lastName}`);
+      formData.append('customerEmail', shippingInfo.email);
+      formData.append('customerPhone', shippingInfo.phone);
+      formData.append('customerAddress', `${shippingInfo.address}, ${shippingInfo.city}, ${shippingInfo.state} ${shippingInfo.pincode}`);
+
+      console.log('Uploading screenshot with data:', {
+        transactionId,
+        amount: totalAmount,
+        customerName: `${shippingInfo.firstName} ${shippingInfo.lastName}`,
+        customerEmail: shippingInfo.email
+      });
+
+      // Guest users don't need authorization
+      const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:5000/api'}/payment/upload-screenshot`, {
+        method: 'POST',
+        body: formData
+      });
+
+      const responseData = await response.json();
+      console.log('Upload response:', responseData);
+
+      if (response.ok) {
+        // Don't show success message here - wait for order creation to complete
+        console.log('✅ Screenshot uploaded successfully');
+        setPaymentStatus('success');
+        setIsScreenshotSubmission(true);
+        
+        // Create order object with screenshot information
+        const order = {
+          id: `UJ${Date.now()}`,
+          items: cartItems,
+          shippingInfo,
+          subtotal,
+          shippingCost,
+          codFee,
+          discount,
+          tax,
+          total,
+          paymentMethod,
+          status: 'pending',
+          createdAt: new Date().toISOString(),
+          paymentData: {
+            transactionId: transactionId,
+            screenshotUploaded: true,
+            uploadResponse: responseData
+          }
+        };
+        
+        setOrderData(order);
+        setCurrentStep(3);
+        
+        // Create order with screenshot information
+        try {
+          await processOrder(order);
+          // Success message will be shown by processOrder
+        } catch (orderError) {
+          console.error('Order creation failed after screenshot upload:', orderError);
+          // Screenshot was uploaded successfully, but order creation failed
+          toast.error('Payment screenshot uploaded successfully, but order creation failed. Please contact support with your transaction ID: ' + transactionId);
+        }
+      } else {
+        console.error('Upload failed:', responseData);
+        toast.error(responseData.message || 'Failed to upload screenshot. Please try again.');
+      }
+    } catch (error) {
+      console.error('Screenshot upload error:', error);
+      toast.error(error.message || 'Failed to upload screenshot. Please check your internet connection and try again.');
+    } finally {
+      setIsUploadingScreenshot(false);
+    }
   };
 
   const handleNextStep = () => {
@@ -188,7 +317,7 @@ const Checkout = () => {
       };
 
       if (paymentMethod === 'esewa') {
-        const paymentData = generateQRPayment();
+        const paymentData = generatePaymentData();
         setOrderData({ ...order, paymentData });
         setCurrentStep(3);
         
@@ -219,6 +348,7 @@ const Checkout = () => {
           }));
           
           // Clear cart anyway for better UX
+          setOrderSubmitted(true);
           clearCart();
         }
       } else {
@@ -231,41 +361,52 @@ const Checkout = () => {
         }, 2000);
       }
     } catch (error) {
-      setPaymentStatus('failed');
-      toast.error('Payment failed. Please try again.');
+      setPaymentStatus('processing');
+      toast.success('Payment submitted successfully! Processing your order...');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const processOrder = async (order) => {
+  const processOrder = async (order = null) => {
     try {
-      // Check if user is authenticated before API call
-      if (!user || !user.token) {
-        throw new Error('Please log in to place an order');
-      }
-
+      console.log('🔄 Processing order:', order);
+      
+      // Guest checkout allowed - user authentication is optional
+      
       // Prepare detailed order data for API
       const orderData = {
-        items: cartItems.map(item => ({
-          product: item.product._id || item.id,
-          productSnapshot: {
-            name: item.product.name || item.name,
-            sku: item.product.sku || '',
-            image: item.product.images?.[0]?.url || item.image,
-            price: item.price,
-            specifications: item.product.specifications || {}
-          },
-          quantity: item.quantity,
-          price: item.price,
-          variant: item.variant || null
-        })),
+        items: cartItems.map(item => {
+          // Ensure we have valid product data
+          const product = item.product || item;
+          const productId = product._id || product.id || null;
+          
+          const itemData = {
+            product: productId,
+            productSnapshot: {
+              name: product.name || 'Unknown Product',
+              ...(product.sku && product.sku.trim() !== '' && { sku: product.sku }),
+              image: product.images?.[0]?.url || product.image || '',
+              price: item.price || product.price || 0,
+              specifications: product.specifications || {}
+            },
+            quantity: item.quantity || 1,
+            price: item.price || product.price || 0
+          };
+          
+          // Only include variant if it exists and is not null
+          if (item.variant && item.variant !== null) {
+            itemData.variant = item.variant;
+          }
+          
+          return itemData;
+        }).filter(item => item.productSnapshot.name !== 'Unknown Product'), // Filter out invalid items
         customerInfo: {
           firstName: shippingInfo.firstName,
           lastName: shippingInfo.lastName,
           email: shippingInfo.email,
-          phone: shippingInfo.phone,
-          userId: user?.id || user?._id
+          phone: shippingInfo.phone
+          // Removed userId and isGuest - causes validation errors
         },
         shippingAddress: {
           firstName: shippingInfo.firstName,
@@ -306,17 +447,26 @@ const Checkout = () => {
         payment: {
           method: paymentMethod,
           status: paymentMethod === 'cod' ? 'pending' : (paymentStatus === 'success' ? 'completed' : 'pending'),
-          transactionId: paymentMethod === 'cod' ? 'COD-' + Date.now() : (qrPaymentData?.transactionId || `UJ${Date.now()}`)
+          transactionId: order?.paymentData?.transactionId || 
+                        (paymentMethod === 'cod' ? 'COD-' + Date.now() : (qrPaymentData?.transactionId || `UJ${Date.now()}`)),
+          // Add screenshot information if available
+          ...(order?.paymentData?.screenshotUploaded && {
+            hasScreenshot: true,
+            screenshotData: order.paymentData.uploadResponse,
+            verificationStatus: 'pending_verification'
+          })
+          // Removed screenshot - causes validation error, backend handles screenshot separately
         },
         pricing: {
           subtotal: parseFloat(subtotal.toFixed(2)),
           shippingCost: parseFloat(shippingCost.toFixed(2)),
-          codFee: parseFloat(codFee.toFixed(2)),
+          // Removed codFee - causes validation error
           tax: parseFloat(tax.toFixed(2)),
           discount: parseFloat(discount.toFixed(2)),
           total: parseFloat(total.toFixed(2))
         },
-        couponCode: appliedCoupon?.code || null,
+        // Only include couponCode if it exists - null causes validation error
+        ...(appliedCoupon?.code && { couponCode: appliedCoupon.code }),
         couponDiscount: appliedCoupon ? discount : 0,
         notes: {
           customerNotes: '',
@@ -331,25 +481,79 @@ const Checkout = () => {
         }
       };
 
-      console.log('Sending order data:', orderData);
+      console.log('📤 Sending order data to API:', orderData);
+
+      // Validate required fields before sending
+      const requiredFields = {
+        'items': orderData.items?.length > 0,
+        'customerInfo.firstName': orderData.customerInfo?.firstName,
+        'customerInfo.lastName': orderData.customerInfo?.lastName,
+        'customerInfo.email': orderData.customerInfo?.email,
+        'shippingAddress.firstName': orderData.shippingAddress?.firstName,
+        'shippingAddress.lastName': orderData.shippingAddress?.lastName,
+        'shippingAddress.email': orderData.shippingAddress?.email,
+        'shippingAddress.phone': orderData.shippingAddress?.phone,
+        'shippingAddress.street': orderData.shippingAddress?.street,
+        'shippingAddress.city': orderData.shippingAddress?.city,
+        'shippingAddress.state': orderData.shippingAddress?.state,
+        'shippingAddress.zipCode': orderData.shippingAddress?.zipCode,
+        'pricing.subtotal': typeof orderData.pricing?.subtotal === 'number',
+        'pricing.total': typeof orderData.pricing?.total === 'number'
+      };
+
+      const missingFields = Object.entries(requiredFields).filter(([field, value]) => !value);
+      if (missingFields.length > 0) {
+        console.error('❌ Missing required fields:', missingFields);
+      }
+
+      // Log cart structure for debugging
+      console.log('🛒 Cart items structure:', cartItems.map(item => ({
+        id: item.id,
+        productId: item.product?._id,
+        productName: item.product?.name,
+        quantity: item.quantity,
+        price: item.price
+      })));
 
       // Send order to backend API
+      console.log('📤 About to send order data to API...');
+      console.log('🔍 Full order data being sent:', JSON.stringify(orderData, null, 2));
+      
       const response = await ordersAPI.createOrder(orderData);
-      console.log('Order created successfully:', response.data);
+      console.log('✅ Order created successfully:', response.data);
+      
+      // Set the order response data for display
+      setOrderData({
+        id: response.data.order?.orderNumber || response.data.order?.id || response.data.orderId,
+        total: response.data.order?.total || orderData.pricing.total,
+        items: response.data.order?.items || orderData.items,
+        status: response.data.order?.status || 'pending',
+        paymentMethod: paymentMethod,
+        customerInfo: response.data.order?.customerInfo || orderData.customerInfo
+      });
+      
+      // Set payment status to success
+      setPaymentStatus('success');
+      
+      // Mark order as submitted to prevent auto-redirect to products
+      setOrderSubmitted(true);
       
       // Clear cart
       clearCart();
       
-      // Show success message
-      toast.success('Order placed successfully! Check your email for confirmation.');
+      // Show success message based on payment method
+      if (paymentMethod === 'cod') {
+        toast.success('COD Order placed successfully! We will contact you shortly for confirmation.');
+      } else {
+        toast.success('Order placed successfully! Your payment screenshot has been submitted for verification. We will contact you soon through Email or Phone.');
+      }
       
-      // Redirect to success page after 2 seconds
-      setTimeout(() => {
-        navigate(`/order-success/${response.data.order?.id || response.data.orderId || 'unknown'}`);
-      }, 2000);
+      // No automatic redirect - users can use "Continue Shopping" button
+      console.log('Order submitted successfully. User can manually navigate using buttons.');
+      
       
     } catch (error) {
-      console.error('Error processing order:', error);
+      console.error('❌ Error processing order:', error);
       console.error('Error response:', error.response?.data);
       console.error('Error status:', error.response?.status);
       
@@ -366,11 +570,41 @@ const Checkout = () => {
             timestamp: new Date().toISOString(),
             status: 'pending_manual_processing'
           }));
+          
+          // Mark order as submitted to prevent auto-redirect to products
+          setOrderSubmitted(true);
           clearCart();
         }
         console.log('COD order handling completed, keeping success status');
       } else {
-        toast.error(error.response?.data?.message || 'Order processing failed. Please try again.');
+        // For screenshot payment, only show error if order actually failed
+        const errorMessage = error.response?.data?.message || error.message;
+        console.error('📸 Screenshot payment order failed:', errorMessage);
+        console.error('📊 Full error response:', JSON.stringify(error.response?.data, null, 2));
+        console.error('📋 Request data that failed:', JSON.stringify(orderData, null, 2));
+        
+        // Check if this is actually a validation error or just a network issue
+        if (error.response?.status === 400) {
+          // Log validation errors if they exist
+          if (error.response?.data?.errors) {
+            console.error('🔍 Validation errors:', error.response.data.errors);
+            console.table(error.response.data.errors);
+            
+            // Show detailed error message with specific validation issues
+            const errorDetails = error.response.data.errors.join(', ');
+            toast.error(`Validation failed: ${errorDetails}. Please check your cart items and shipping information.`);
+          } else {
+            toast.error(`Order validation failed: ${errorMessage}. Please check your information and try again.`);
+          }
+        } else if (error.response?.status === 401) {
+          toast.error('Authentication required. Please try logging in first.');
+        } else if (error.response?.status === 500) {
+          toast.error('Server error. Your payment screenshot was received but order processing failed. Please contact support with your transaction details.');
+        } else {
+          // For network errors or other issues, don't show scary messages
+          toast.error('There was an issue processing your order. Please contact support if payment was already made.');
+        }
+        
         setPaymentStatus('failed');
       }
     }
@@ -378,10 +612,11 @@ const Checkout = () => {
 
   const retryPayment = () => {
     setPaymentStatus('pending');
-    generateQRPayment();
+    generatePaymentData();
   };
 
-  if (cartItems.length === 0) return null;
+  // Show checkout page even if cart is empty when order was successfully submitted
+  if (cartItems.length === 0 && !orderSubmitted) return null;
 
   return (
     <div className="min-h-screen bg-gray-50 py-12">
@@ -660,34 +895,67 @@ const Checkout = () => {
                 >
                   {paymentMethod === 'cod' && paymentStatus === 'success' && (
                     <div className="text-center">
-                      <div className="mx-auto h-16 w-16 bg-orange-100 rounded-full flex items-center justify-center mb-4">
-                        <BanknotesIcon className="h-8 w-8 text-orange-600" />
+                      <div className="mx-auto h-20 w-20 bg-orange-100 rounded-full flex items-center justify-center mb-6">
+                        <BanknotesIcon className="h-12 w-12 text-orange-600" />
                       </div>
-                      <h2 className="text-2xl font-bold text-gray-900 mb-2">Order Confirmed!</h2>
-                      <p className="text-gray-600 mb-6">Your Cash on Delivery order has been placed successfully.</p>
+                      <h2 className="text-3xl font-bold text-orange-600 mb-2">🎉 COD Order Confirmed!</h2>
+                      <p className="text-xl text-gray-700 mb-6">Your Cash on Delivery order has been placed successfully!</p>
                       
                       {orderData && (
-                        <div className="bg-orange-50 rounded-lg p-4 text-left mb-6">
-                          <h3 className="font-semibold text-orange-900 mb-3">COD Order Details:</h3>
-                          <div className="space-y-2 text-sm text-orange-800">
-                            <p><strong>Order ID:</strong> {orderData.id}</p>
-                            <p><strong>Amount to Pay:</strong> NPR {orderData.total.toLocaleString()}</p>
-                            <p><strong>Items:</strong> {orderData.items.length} product(s)</p>
-                            <p><strong>Delivery:</strong> 3-5 business days</p>
-                            <p><strong>Payment:</strong> Cash on Delivery</p>
+                        <div className="bg-orange-50 border border-orange-200 rounded-lg p-6 text-left mb-6">
+                          <h3 className="font-bold text-orange-800 text-lg mb-4">📋 Order Details:</h3>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                            <div>
+                              <p className="text-orange-700"><strong>Order Number:</strong> {orderData.id}</p>
+                              <p className="text-orange-700"><strong>Amount to Pay:</strong> NPR {orderData.total?.toLocaleString()}</p>
+                              <p className="text-orange-700"><strong>Items:</strong> {orderData.items?.length} product(s)</p>
+                            </div>
+                            <div>
+                              <p className="text-orange-700"><strong>Payment Method:</strong> Cash on Delivery</p>
+                              <p className="text-orange-700"><strong>Delivery:</strong> 3-5 business days</p>
+                              <p className="text-orange-700"><strong>Status:</strong> <span className="text-green-600 font-medium">Confirmed</span></p>
+                            </div>
                           </div>
                         </div>
                       )}
                       
-                      <div className="bg-gray-50 rounded-lg p-4 text-left">
-                        <h4 className="font-medium text-gray-900 mb-2">What happens next?</h4>
-                        <ul className="text-sm text-gray-600 space-y-1">
-                          <li>✓ Order confirmation email sent</li>
-                          <li>✓ Your order is being prepared</li>
-                          <li>📦 We'll call you before delivery</li>
-                          <li>💰 Pay NPR {total.toLocaleString()} to delivery person</li>
-                          <li>📱 Track your order anytime</li>
-                        </ul>
+                      <div className="bg-green-50 border border-green-200 rounded-lg p-6 text-left mb-6">
+                        <h4 className="font-bold text-green-800 text-lg mb-3">✅ What happens next?</h4>
+                        <div className="space-y-3 text-sm text-green-800">
+                          <p className="flex items-center"><span className="mr-2">📧</span> Order confirmation email sent to {shippingInfo.email}</p>
+                          <p className="flex items-center"><span className="mr-2">📦</span> Your order is being prepared for delivery</p>
+                          <p className="flex items-center"><span className="mr-2">�</span> We'll call you at {shippingInfo.phone} before delivery</p>
+                          <p className="flex items-center"><span className="mr-2">💰</span> Pay NPR {orderData?.total?.toLocaleString()} to the delivery person</p>
+                          <p className="flex items-center"><span className="mr-2">�</span> Track your order anytime with Order Number: <strong>{orderData?.id}</strong></p>
+                        </div>
+                      </div>
+                      
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                        <p className="text-blue-800 text-sm">
+                          📞 <strong>Need help?</strong> Contact us anytime if you have questions about your order.
+                        </p>
+                      </div>
+                      
+                      <div className="text-center">
+                        <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                          <button
+                            onClick={() => navigate('/')}
+                            className="bg-orange-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-orange-700 transition-colors duration-200"
+                          >
+                            Continue Shopping
+                          </button>
+                          
+                          <button
+                            onClick={() => navigate('/profile')}
+                            className="bg-gray-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-gray-700 transition-colors duration-200"
+                          >
+                            View My Orders
+                          </button>
+                        </div>
+                        
+                        <p className="text-gray-500 text-xs mt-4">
+                          Choose your next action using the buttons above
+                        </p>
                       </div>
                     </div>
                   )}
@@ -696,85 +964,227 @@ const Checkout = () => {
                     <div className="text-center">
                       <h2 className="text-lg font-semibold text-gray-900 mb-6">Complete Your eSewa Payment</h2>
                       
-                      <div className="max-w-sm mx-auto">
+                      <div className="max-w-md mx-auto">
                         <div className="bg-white p-4 rounded-lg border-2 border-green-200 mb-4">
-                          <QRCode 
-                            value={qrPaymentData.qrString} 
-                            size={200}
-                            className="mx-auto"
+                          <img 
+                            src="/esewaQR.png" 
+                            alt="eSewa Payment QR Code"
+                            width={200}
+                            height={200}
+                            className="mx-auto rounded"
                           />
                         </div>
                         
-                        <div className="text-sm text-gray-600 space-y-2">
+                        <div className="text-sm text-gray-600 space-y-2 mb-6">
                           <p><strong>Amount:</strong> NPR {total.toLocaleString()}</p>
-                          <p><strong>Transaction ID:</strong> {qrPaymentData.transactionId}</p>
-                          <p className="text-xs mt-4 text-green-600 font-semibold">Scan with eSewa app to pay</p>
+                          <p className="text-xs text-green-600 font-semibold">Scan with eSewa app to pay</p>
                         </div>
 
-                        <div className="mt-6 space-y-3">
-                          <div className="bg-green-50 border border-green-200 rounded-md p-3">
-                            <p className="text-sm text-green-800 font-medium">eSewa Payment Instructions:</p>
-                            <ol className="text-xs text-green-700 mt-2 space-y-1">
-                              <li>1. Open eSewa mobile app</li>
-                              <li>2. Tap "Scan & Pay"</li>
-                              <li>3. Scan the QR code above</li>
-                              <li>4. Enter PIN to confirm</li>
-                              <li>5. Payment will be verified automatically</li>
-                            </ol>
-                          </div>
-                          
-                          <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
-                            <p className="text-sm text-blue-800">
-                              <strong>eSewa ID:</strong> 9765723517<br/>
-                              <strong>Amount:</strong> NPR {total}<br/>
-                              <strong>Reference:</strong> {qrPaymentData.transactionId}
+                        {/* Screenshot Upload Section */}
+                        <div className="mt-6 space-y-4">
+                          <div className="bg-blue-50 border border-blue-200 rounded-md p-4">
+                            <h3 className="text-sm font-medium text-blue-800 mb-3">Submit Payment Screenshot</h3>
+                            <p className="text-xs text-blue-700 mb-4">
+                              After completing payment, upload a screenshot for verification
                             </p>
+                            
+                            <div className="space-y-4">
+                              <div>
+                                <input
+                                  type="file"
+                                  accept="image/*"
+                                  onChange={handleScreenshotUpload}
+                                  className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                                />
+                              </div>
+                              
+                              {screenshotPreview && (
+                                <div className="mt-3">
+                                  <img 
+                                    src={screenshotPreview} 
+                                    alt="Payment Screenshot Preview" 
+                                    className="max-w-full h-32 object-contain mx-auto border border-gray-200 rounded"
+                                  />
+                                </div>
+                              )}
+                              
+                              <button
+                                onClick={submitPaymentScreenshot}
+                                disabled={!paymentScreenshot || isUploadingScreenshot}
+                                className={`w-full py-2 px-4 rounded-md text-sm font-medium ${
+                                  paymentScreenshot && !isUploadingScreenshot
+                                    ? 'bg-green-600 hover:bg-green-700 text-white'
+                                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                }`}
+                              >
+                                {isUploadingScreenshot ? (
+                                  <div className="flex items-center justify-center">
+                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                                    Uploading...
+                                  </div>
+                                ) : (
+                                  'Submit Payment Screenshot'
+                                )}
+                              </button>
+                            </div>
                           </div>
-                        </div>
-
-                        <div className="mt-6 flex items-center justify-center text-green-600">
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-green-600 mr-2"></div>
-                          Waiting for eSewa payment confirmation...
                         </div>
 
                         <button
                           onClick={retryPayment}
                           className="mt-4 text-sm text-green-600 hover:text-green-500"
                         >
-                          Generate new eSewa QR code
+                          Generate new payment reference
                         </button>
                       </div>
                     </div>
                   )}
 
-                  {paymentStatus === 'success' && (
+                  {paymentStatus === 'success' && !isScreenshotSubmission && (
                     <div className="text-center">
-                      <CheckCircleIcon className="mx-auto h-16 w-16 text-green-500 mb-4" />
-                      <h2 className="text-2xl font-bold text-gray-900 mb-2">Payment Successful!</h2>
-                      <p className="text-gray-600 mb-6">Your order has been placed successfully.</p>
+                      <div className="mx-auto h-20 w-20 bg-green-100 rounded-full flex items-center justify-center mb-6">
+                        <CheckCircleIcon className="h-12 w-12 text-green-600" />
+                      </div>
+                      <h2 className="text-3xl font-bold text-green-600 mb-2">🎉 Order Placed Successfully!</h2>
+                      <p className="text-xl text-gray-700 mb-6">Thank you for your purchase!</p>
                       
                       {orderData && (
-                        <div className="bg-gray-50 rounded-lg p-4 text-left">
-                          <h3 className="font-semibold text-gray-900 mb-2">Order Details:</h3>
-                          <p className="text-sm text-gray-600">Order ID: {orderData.id}</p>
-                          <p className="text-sm text-gray-600">Total: NPR {orderData.total.toLocaleString()}</p>
-                          <p className="text-sm text-gray-600">Items: {orderData.items.length}</p>
+                        <div className="bg-green-50 border border-green-200 rounded-lg p-6 text-left mb-6">
+                          <h3 className="font-bold text-green-800 text-lg mb-4">📋 Order Details:</h3>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                            <div>
+                              <p className="text-green-700"><strong>Order Number:</strong> {orderData.id}</p>
+                              <p className="text-green-700"><strong>Total Amount:</strong> NPR {orderData.total?.toLocaleString()}</p>
+                              <p className="text-green-700"><strong>Items:</strong> {orderData.items?.length} product(s)</p>
+                            </div>
+                            <div>
+                              <p className="text-green-700"><strong>Payment Method:</strong> {orderData.paymentMethod === 'cod' ? 'Cash on Delivery' : (orderData.paymentMethod === 'esewa' ? 'eSewa' : 'Bank Transfer')}</p>
+                              <p className="text-green-700"><strong>Status:</strong> <span className="text-green-600 font-medium">Confirmed</span></p>
+                              <p className="text-green-700"><strong>Customer:</strong> {orderData.customerInfo?.firstName} {orderData.customerInfo?.lastName}</p>
+                            </div>
+                          </div>
                         </div>
                       )}
                       
-                      <p className="text-sm text-gray-500 mt-4">
-                        You will receive an email confirmation shortly.
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                        <p className="text-blue-800 text-sm">
+                          📧 <strong>Confirmation email sent to:</strong> {shippingInfo.email}
+                        </p>
+                        <p className="text-blue-800 text-sm mt-1">
+                          📱 <strong>We'll contact you at:</strong> {shippingInfo.phone}
+                        </p>
+                      </div>
+                      
+                      <div className="text-center">
+                        <p className="text-gray-600 text-sm mb-6">
+                          🚚 Your order will be processed and shipped within 2-3 business days.
+                        </p>
+                        
+                        <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                          <button
+                            onClick={() => navigate('/')}
+                            className="bg-green-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-green-700 transition-colors duration-200"
+                          >
+                            Continue Shopping
+                          </button>
+                          
+                          <button
+                            onClick={() => navigate('/profile')}
+                            className="bg-gray-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-gray-700 transition-colors duration-200"
+                          >
+                            View My Orders
+                          </button>
+                        </div>
+                        
+                        <p className="text-gray-500 text-xs mt-4">
+                          Choose your next action using the buttons above
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {paymentStatus === 'success' && isScreenshotSubmission && (
+                    <div className="text-center">
+                      <div className="mx-auto h-20 w-20 bg-blue-100 rounded-full flex items-center justify-center mb-6">
+                        <CheckCircleIcon className="h-12 w-12 text-blue-600" />
+                      </div>
+                      <h2 className="text-3xl font-bold text-blue-600 mb-2">🎉 Order Submitted Successfully!</h2>
+                      <p className="text-xl text-blue-700 font-medium mb-6">
+                        Your payment screenshot has been received!
                       </p>
+                      
+                      {orderData && (
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 text-left mb-6">
+                          <h3 className="font-bold text-blue-800 text-lg mb-4">📋 Order Summary:</h3>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm mb-4">
+                            <div>
+                              <p className="text-blue-700"><strong>Order Number:</strong> {orderData.id}</p>
+                              <p className="text-blue-700"><strong>Total Amount:</strong> NPR {orderData.total?.toLocaleString()}</p>
+                              <p className="text-blue-700"><strong>Items:</strong> {orderData.items?.length} product(s)</p>
+                            </div>
+                            <div>
+                              <p className="text-blue-700"><strong>Payment Method:</strong> {orderData.paymentMethod === 'esewa' ? 'eSewa' : 'Bank Transfer'}</p>
+                              <p className="text-blue-700"><strong>Status:</strong> <span className="text-amber-600 font-medium">Pending Verification</span></p>
+                              <p className="text-blue-700"><strong>Customer:</strong> {orderData.customerInfo?.firstName} {orderData.customerInfo?.lastName}</p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="bg-green-50 border border-green-200 rounded-lg p-6 text-left mb-6">
+                        <h3 className="font-bold text-green-800 text-lg mb-3">✅ What happens next?</h3>
+                        <div className="space-y-3 text-sm text-green-800">
+                          <p className="flex items-center"><span className="mr-2">📸</span> Your payment screenshot has been successfully received</p>
+                          <p className="flex items-center"><span className="mr-2">🔍</span> Our team will verify your payment within 24 hours</p>
+                          <p className="flex items-center"><span className="mr-2">📧</span> You'll receive a confirmation email once verified</p>
+                          <p className="flex items-center"><span className="mr-2">📱</span> We'll contact you at <strong>{shippingInfo.phone}</strong></p>
+                          <p className="flex items-center"><span className="mr-2">📦</span> Your order will be processed and shipped after verification</p>
+                        </div>
+                      </div>
+                      
+                      <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6">
+                        <p className="text-amber-800 text-sm">
+                          <strong>⚠️ Important:</strong> Please keep your payment receipt safe. 
+                          If you have any questions, contact us at <strong>support@thealankriti.com</strong>
+                        </p>
+                        <p className="text-amber-700 text-sm mt-3">
+                          📸 <strong>For faster support:</strong> Take a screenshot or capture image of your order details, 
+                          tracking ID, and payment receipt when contacting us for any inquiries, issues, or complaints. 
+                          This helps us resolve your concerns quickly and accurately.
+                        </p>
+                      </div>
+                      
+                      <div className="text-center">
+                        <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                          <button
+                            onClick={() => navigate('/')}
+                            className="bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors duration-200"
+                          >
+                            Continue Shopping
+                          </button>
+                          
+                          <button
+                            onClick={() => navigate('/profile')}
+                            className="bg-gray-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-gray-700 transition-colors duration-200"
+                          >
+                            View My Orders
+                          </button>
+                        </div>
+                        
+                        <p className="text-gray-500 text-xs mt-4">
+                          Choose your next action using the buttons above
+                        </p>
+                      </div>
                     </div>
                   )}
 
                   {paymentStatus === 'failed' && (
                     <div className="text-center">
                       <div className="mx-auto h-16 w-16 bg-red-100 rounded-full flex items-center justify-center mb-4">
-                        <span className="text-red-600 text-2xl">✕</span>
+                        <span className="text-red-600 text-2xl">⚠</span>
                       </div>
                       <h2 className="text-2xl font-bold text-gray-900 mb-2">Payment Failed</h2>
-                      <p className="text-gray-600 mb-6">There was an issue processing your payment.</p>
+                      <p className="text-gray-600 mb-6">There was an issue processing your payment. Please try again.</p>
                       
                       <button
                         onClick={() => setCurrentStep(2)}
@@ -815,25 +1225,51 @@ const Checkout = () => {
             <div className="bg-white shadow rounded-lg p-6 sticky top-4">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Order Summary</h3>
               
-              {/* Cart items */}
+              {/* Cart items or order confirmation */}
               <div className="space-y-4 mb-6">
-                {cartItems.map((item) => (
-                  <div key={`${item.id}-${item.size}`} className="flex items-center space-x-4">
-                    <img
-                      src={item.image}
-                      alt={item.name}
-                      className="h-16 w-16 rounded-md object-cover"
-                    />
+                {cartItems.length > 0 ? (
+                  cartItems.map((item) => (
+                  <div key={`${item.id}-${item.variant?.size || item.size || 'default'}`} className="flex items-center space-x-4">
+                    <div className="h-16 w-16 flex-shrink-0">
+                      <SafeImage
+                        src={
+                          getImageUrl(item.product?.images?.[0]?.url) || 
+                          getImageUrl(item.image) || 
+                          getImageUrl(item.product?.image)
+                        }
+                        alt={
+                          item.product?.images?.[0]?.alt || 
+                          item.product?.name || 
+                          item.name || 
+                          'Product'
+                        }
+                        className="h-16 w-16 rounded-md object-cover"
+                        fallbackType="jewelry"
+                      />
+                    </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900 truncate">{item.name}</p>
-                      <p className="text-sm text-gray-500">Size: {item.size}</p>
+                      <p className="text-sm font-medium text-gray-900 truncate">
+                        {item.product?.name || item.name}
+                      </p>
+                      <p className="text-sm text-gray-500">
+                        Size: {item.variant?.size || item.size || 'One Size'}
+                      </p>
                       <p className="text-sm text-gray-500">Qty: {item.quantity}</p>
                     </div>
                     <p className="text-sm font-medium text-gray-900">
-                      NPR {(item.price * item.quantity).toLocaleString()}
+                      NPR {((item.product?.price || item.price) * item.quantity).toLocaleString()}
                     </p>
                   </div>
-                ))}
+                  ))
+                ) : orderSubmitted ? (
+                  <div className="text-center py-8">
+                    <div className="text-green-600 mb-2">
+                      <CheckCircleIcon className="mx-auto h-12 w-12" />
+                    </div>
+                    <p className="text-gray-600">Order completed successfully!</p>
+                    <p className="text-sm text-gray-500 mt-1">Check the details on the left</p>
+                  </div>
+                ) : null}
               </div>
 
               {/* Coupon code */}

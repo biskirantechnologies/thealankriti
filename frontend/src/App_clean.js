@@ -190,11 +190,10 @@ function App() {
                 <Route path="/register" element={<Register />} />
                 <Route path="/admin-login" element={<AdminLogin />} />
                 
-                {/* Public Routes - No Login Required */}
+                {/* Protected Routes */}
                 <Route path="/cart" element={<Cart />} />
-                <Route path="/checkout" element={<Checkout />} />
-                <Route path="/order-success/:orderId" element={<OrderSuccess />} />
-                {/* Optional Auth Routes - Can use with or without login */}
+                <Route path="/checkout" element={<ProtectedRoute><Checkout /></ProtectedRoute>} />
+                <Route path="/order-success/:orderId" element={<ProtectedRoute><OrderSuccess /></ProtectedRoute>} />
                 <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
                 <Route path="/orders" element={<ProtectedRoute><Orders /></ProtectedRoute>} />
                 <Route path="/orders/:id" element={<ProtectedRoute><OrderDetail /></ProtectedRoute>} />
