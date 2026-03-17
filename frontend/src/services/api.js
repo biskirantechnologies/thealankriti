@@ -2,10 +2,38 @@ import axios from 'axios';
 import Cookies from 'js-cookie';
 import toast from 'react-hot-toast';
 
+const getNormalizedApiBaseUrl = () => {
+  const fallback = window.location.hostname === 'localhost'
+    ? 'http://localhost:5000/api'
+    : 'https://api.thealankriti.com/api';
+
+  const rawEnvUrl = (process.env.REACT_APP_API_URL || '').trim();
+  if (!rawEnvUrl) {
+    return fallback;
+  }
+
+  const fixedProtocolUrl = rawEnvUrl.replace(/^(https?):\/+/, '$1://');
+
+  try {
+    const parsed = new URL(fixedProtocolUrl);
+    if (!parsed.protocol || !parsed.host) {
+      return fallback;
+    }
+
+    const normalizedPath = parsed.pathname.endsWith('/api')
+      ? parsed.pathname
+      : `${parsed.pathname.replace(/\/$/, '')}/api`;
+
+    return `${parsed.protocol}//${parsed.host}${normalizedPath}`;
+  } catch (error) {
+    return fallback;
+  }
+};
+
 // Create axios instance
 const api = axios.create({
-  baseURL: process.env.REACT_APP_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:5000/api' : 'https://thealankriti-backendd.onrender.com/api'),
-  timeout: 10000, // Reduced from 30000 to 10000ms
+  baseURL: getNormalizedApiBaseUrl(),
+  timeout: 30000, // 30 seconds for slow server responses
   headers: {
     'Content-Type': 'application/json',
   },

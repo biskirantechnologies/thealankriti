@@ -1,22 +1,32 @@
 // Utility function to get the correct API base URL
 const getApiBaseUrl = () => {
-  // Check environment variable first, then fallback based on hostname
-  const envUrl = process.env.REACT_APP_API_URL;
-  const defaultUrl = window.location.hostname === 'localhost' 
-    ? 'http://localhost:5000/api' 
-    : 'https://thealankriti-backendd.onrender.com/api';
-  
-  const baseUrl = envUrl || defaultUrl;
-  const finalUrl = baseUrl.replace('/api', '');
-  
-  console.log('🔧 getApiBaseUrl debug:');
-  console.log('🔧   envUrl:', envUrl);
-  console.log('🔧   window.location.hostname:', window.location.hostname);
-  console.log('🔧   defaultUrl:', defaultUrl);
-  console.log('🔧   baseUrl:', baseUrl);
-  console.log('🔧   finalUrl:', finalUrl);
-  
-  return finalUrl;
+  const defaultUrl = window.location.hostname === 'localhost'
+    ? 'http://localhost:5000/api'
+    : 'https://api.thealankriti.com/api';
+
+  const rawEnvUrl = (process.env.REACT_APP_API_URL || '').trim();
+  if (!rawEnvUrl) {
+    return defaultUrl;
+  }
+
+  // Fix malformed protocol like: https:/.domain.com/api -> https://domain.com/api
+  const fixedProtocolUrl = rawEnvUrl.replace(/^(https?):\/+/, '$1://');
+
+  try {
+    const parsed = new URL(fixedProtocolUrl);
+    if (!parsed.protocol || !parsed.host) {
+      return defaultUrl;
+    }
+
+    // Always ensure we keep /api suffix for axios/api utilities
+    const normalizedPath = parsed.pathname.endsWith('/api')
+      ? parsed.pathname
+      : `${parsed.pathname.replace(/\/$/, '')}/api`;
+
+    return `${parsed.protocol}//${parsed.host}${normalizedPath}`;
+  } catch (error) {
+    return defaultUrl;
+  }
 };
 
 // Utility function to get the full API URL
@@ -25,47 +35,74 @@ const getApiUrl = (endpoint = '') => {
   if (endpoint.startsWith('/')) {
     return `${baseUrl}${endpoint}`;
   }
-  return `${baseUrl}/api/${endpoint}`;
+  return `${baseUrl}/${endpoint}`;
 };
 
 // Utility function to get image URL with production fallback
 const getImageUrl = (imagePath) => {
-  console.log('🔧 getImageUrl called with:', imagePath, 'Type:', typeof imagePath);
-  
-  if (!imagePath || typeof imagePath !== 'string') {
-    console.log('🔧 No imagePath provided or not a string, returning empty string');
+  if (!imagePath) {
     return '';
   }
-  
-  // If it's already a full URL, return as is
-  if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
-    console.log('🔧 Full URL detected, returning as is:', imagePath);
-    return `${imagePath}?v=${Date.now()}`;
+
+  if (typeof imagePath === 'object') {
+    const objectPath = imagePath.url || imagePath.path || imagePath.image || imagePath.src || '';
+    return getImageUrl(objectPath);
   }
-  
-  const baseUrl = getApiBaseUrl();
-  console.log('🔧 Base URL:', baseUrl);
-  
-  // In production, if backend is suspended, return fallback immediately
-  const isProduction = window.location.hostname !== 'localhost';
-  const isRenderBackend = baseUrl.includes('onrender.com');
-  
-  if (isProduction && isRenderBackend) {
-    console.log('🔧 Production environment with Render backend detected, using fallback');
+
+  if (typeof imagePath !== 'string') {
     return '';
   }
-  
-  // If it starts with /uploads, prepend the base URL
-  if (imagePath.startsWith('/uploads')) {
-    const fullUrl = `${baseUrl}${imagePath}?v=${Date.now()}`;
-    console.log('🔧 /uploads path detected, constructed URL:', fullUrl);
-    return fullUrl;
+
+  const trimmedPath = imagePath.trim();
+  if (!trimmedPath) {
+    return '';
   }
-  
-  // If it's a relative path, assume it's in uploads
-  const fullUrl = `${baseUrl}/uploads/${imagePath}?v=${Date.now()}`;
-  console.log('🔧 Relative path detected, constructed URL:', fullUrl);
-  return fullUrl;
+
+  // Never try to convert browser-local/image-data URLs to backend URLs
+  if (trimmedPath.startsWith('blob:') || trimmedPath.startsWith('data:')) {
+    return '';
+  }
+
+  const baseUrl = getApiBaseUrl().replace(/\/api$/, '');
+
+  // Handle absolute URLs
+  if (trimmedPath.startsWith('http://') || trimmedPath.startsWith('https://')) {
+    try {
+      const parsed = new URL(trimmedPath);
+      const normalizedPathname = parsed.pathname.replace(/\\/g, '/');
+
+      // If DB accidentally stored frontend-domain uploads URL, rewrite to API domain uploads path
+      const uploadsIndex = normalizedPathname.indexOf('/uploads/');
+      if (uploadsIndex !== -1) {
+        const uploadsPath = normalizedPathname.slice(uploadsIndex);
+        return `${baseUrl}${uploadsPath}${parsed.search || ''}`;
+      }
+
+      return trimmedPath;
+    } catch (error) {
+      return '';
+    }
+  }
+
+  // Handle file-system style and Windows-style paths from DB
+  const slashNormalized = trimmedPath.replace(/\\/g, '/');
+  const uploadsIndex = slashNormalized.indexOf('uploads/');
+  if (uploadsIndex !== -1) {
+    const uploadsPath = slashNormalized.slice(uploadsIndex).replace(/^\/+/, '');
+    return `${baseUrl}/${uploadsPath}`;
+  }
+
+  const normalizedPath = slashNormalized.replace(/^\/+/, '');
+
+  if (normalizedPath.startsWith('products/')) {
+    return `${baseUrl}/uploads/${normalizedPath}`;
+  }
+
+  if (normalizedPath.startsWith('uploads/')) {
+    return `${baseUrl}/${normalizedPath}`;
+  }
+
+  return `${baseUrl}/uploads/${normalizedPath}`;
 };
 
 // Enhanced fallback image helper with jewelry-appropriate placeholders
@@ -75,26 +112,8 @@ const getImageWithFallback = (imagePath, alt = 'Jewelry') => {
   if (imageUrl) {
     return imageUrl;
   }
-  
-  // For production when backend is unavailable, use high-quality placeholder images
-  const isProduction = window.location.hostname !== 'localhost';
-  
-  if (isProduction) {
-    // Use jewelry-related placeholder images from Unsplash
-    const jewelryPlaceholders = [
-      'https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=400&h=400&fit=crop&crop=center',
-      'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=400&h=400&fit=crop&crop=center',
-      'https://images.unsplash.com/photo-1573408301185-9146fe634ad0?w=400&h=400&fit=crop&crop=center',
-      'https://images.unsplash.com/photo-1605100804763-247f67b3557e?w=400&h=400&fit=crop&crop=center',
-      'https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?w=400&h=400&fit=crop&crop=center'
-    ];
-    
-    // Use hash of imagePath to consistently return same placeholder for same path
-    const hash = imagePath ? imagePath.length % jewelryPlaceholders.length : 0;
-    return jewelryPlaceholders[hash];
-  }
-  
-  // Return a data URL for a simple gray background for development
+
+  // Return a neutral placeholder for both development and production
   return 'data:image/svg+xml;base64,' + btoa(`
     <svg width="400" height="400" xmlns="http://www.w3.org/2000/svg">
       <rect width="100%" height="100%" fill="#f3f4f6"/>

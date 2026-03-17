@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { EyeIcon, EyeSlashIcon, ShieldCheckIcon, ComputerDesktopIcon } from '@heroicons/react/24/outline';
 import { motion } from 'framer-motion';
@@ -10,7 +10,6 @@ import emergencyAuth from '../../services/emergencyAuth';
 
 const AdminLogin = () => {
   const navigate = useNavigate();
-  const location = useLocation();
   const { login, user, isAdmin } = useAuth();
   
   const [formData, setFormData] = useState({
@@ -20,8 +19,6 @@ const AdminLogin = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState('connecting');
-
-  const from = location.state?.from?.pathname || '/admin';
 
   // Monitor auth context for successful admin login - simplified
   useEffect(() => {
@@ -35,7 +32,19 @@ const AdminLogin = () => {
   React.useEffect(() => {
     const checkConnection = async () => {
       try {
-        const response = await fetch(getApiUrl('/health'));
+        const apiUrl = process.env.REACT_APP_API_URL || 'https://api.thealankriti.com/api';
+        const healthUrl = apiUrl.endsWith('/api') ? apiUrl.slice(0, -4) + '/health' : apiUrl + '/health';
+        console.log('🔍 Checking health at:', healthUrl);
+        
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 15000);
+        
+        const response = await fetch(healthUrl, { 
+          signal: controller.signal,
+          mode: 'cors'
+        });
+        clearTimeout(timeoutId);
+        
         if (response.ok) {
           const healthData = await response.json();
           console.log('🏥 Backend health:', healthData);

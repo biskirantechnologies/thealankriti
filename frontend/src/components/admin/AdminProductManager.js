@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   PlusIcon, 
   PencilIcon, 
@@ -10,17 +10,88 @@ import {
 } from '@heroicons/react/24/outline';
 import { Helmet } from 'react-helmet-async';
 import { adminAPI } from '../../services/api';
-import { getApiUrl } from '../../utils/api';
+import { getApiUrl, getImageUrl } from '../../utils/api';
 import toast from 'react-hot-toast';
 import Cookies from 'js-cookie';
+
+const normalizeImageEntry = (image, fallbackName = 'Product', index = 0) => {
+  const rawPath = typeof image === 'string'
+    ? image
+    : image?.url || image?.path || image?.image || image?.src || '';
+
+  if (typeof rawPath !== 'string') {
+    return null;
+  }
+
+  const cleanedPath = rawPath.trim();
+  if (!cleanedPath) {
+    return null;
+  }
+
+  // Do not store local preview/data URLs in DB
+  if (cleanedPath.startsWith('blob:') || cleanedPath.startsWith('data:')) {
+    return null;
+  }
+
+  const validPath =
+    cleanedPath.startsWith('http://') ||
+    cleanedPath.startsWith('https://') ||
+    cleanedPath.startsWith('/uploads/') ||
+    cleanedPath.startsWith('uploads/');
+
+  if (!validPath) {
+    return null;
+  }
+
+  return {
+    url: cleanedPath,
+    alt: image?.alt || `${fallbackName} - Image ${index + 1}`,
+    isPrimary: Boolean(image?.isPrimary) || index === 0
+  };
+};
+
+const normalizeVideoEntry = (video, fallbackName = 'Product', index = 0) => {
+  const rawPath = typeof video === 'string'
+    ? video
+    : video?.url || video?.path || video?.video || video?.src || '';
+
+  if (typeof rawPath !== 'string') {
+    return null;
+  }
+
+  const cleanedPath = rawPath.trim();
+  if (!cleanedPath) {
+    return null;
+  }
+
+  if (cleanedPath.startsWith('blob:') || cleanedPath.startsWith('data:')) {
+    return null;
+  }
+
+  const validPath =
+    cleanedPath.startsWith('http://') ||
+    cleanedPath.startsWith('https://') ||
+    cleanedPath.startsWith('/uploads/') ||
+    cleanedPath.startsWith('uploads/');
+
+  if (!validPath) {
+    return null;
+  }
+
+  return {
+    url: cleanedPath,
+    title: video?.title || `${fallbackName} - Video ${index + 1}`,
+    isPrimary: Boolean(video?.isPrimary) || index === 0
+  };
+};
 
 const AdminProductManager = () => {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
-  const [sortBy, setSortBy] = useState('name');
-  const [sortOrder, setSortOrder] = useState('asc');
+  const [sortBy, setSortBy] = useState('createdAt');
+  const [sortOrder, setSortOrder] = useState('desc');
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalProducts, setTotalProducts] = useState(0);
@@ -30,8 +101,11 @@ const AdminProductManager = () => {
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [updating, setUpdating] = useState({});
   const [uploadingImages, setUploadingImages] = useState(false);
+  const [uploadingVideos, setUploadingVideos] = useState(false);
   const [imageFiles, setImageFiles] = useState([]);
   const [imagePreview, setImagePreview] = useState([]);
+  const [videoFiles, setVideoFiles] = useState([]);
+  const [videoPreview, setVideoPreview] = useState([]);
 
   const categories = [
     { value: 'all', label: 'All Categories' },
@@ -61,14 +135,11 @@ const AdminProductManager = () => {
     stockQuantity: '',
     featured: false,
     tags: '',
-    images: []
+    images: [],
+    videos: []
   });
 
-  useEffect(() => {
-    fetchProducts();
-  }, [currentPage, searchTerm, categoryFilter, sortBy, sortOrder, productsPerPage]);
-
-  const fetchProducts = async () => {
+  const fetchProducts = useCallback(async () => {
     try {
       setLoading(true);
       const params = {
@@ -92,7 +163,11 @@ const AdminProductManager = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentPage, productsPerPage, searchTerm, categoryFilter, sortBy, sortOrder]);
+
+  useEffect(() => {
+    fetchProducts();
+  }, [fetchProducts]);
 
   // Image handling functions
   const handleImageSelect = (e) => {
@@ -121,6 +196,31 @@ const AdminProductManager = () => {
     setImagePreview(newPreviews);
   };
 
+  const handleVideoSelect = (e) => {
+    const files = Array.from(e.target.files);
+
+    if (files.length + videoFiles.length > 5) {
+      toast.error('Maximum 5 videos allowed');
+      return;
+    }
+
+    setVideoFiles(prev => [...prev, ...files]);
+
+    const previews = files.map(file => ({
+      name: file.name,
+      size: file.size
+    }));
+    setVideoPreview(prev => [...prev, ...previews]);
+  };
+
+  const removeVideo = (index) => {
+    const newFiles = videoFiles.filter((_, i) => i !== index);
+    const newPreviews = videoPreview.filter((_, i) => i !== index);
+
+    setVideoFiles(newFiles);
+    setVideoPreview(newPreviews);
+  };
+
   const uploadImages = async (productId) => {
     if (imageFiles.length === 0) {
       return [];
@@ -136,7 +236,7 @@ const AdminProductManager = () => {
         formData.append('productId', productId);
         
         // Upload to a simple image storage endpoint
-        const response = await fetch(getApiUrl('/api/admin/upload-image'), {
+        const response = await fetch(getApiUrl('/admin/upload-image'), {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${Cookies.get('token')}`
@@ -146,19 +246,65 @@ const AdminProductManager = () => {
         
         if (response.ok) {
           const data = await response.json();
+          if (!data?.imageUrl) {
+            throw new Error(`Upload succeeded but image URL missing for ${file.name}`);
+          }
           uploadedImages.push(data.imageUrl);
         } else {
           const errorText = await response.text();
-          console.error('Failed to upload image:', file.name, 'Status:', response.status, 'Error:', errorText);
+          throw new Error(`Failed to upload ${file.name} (Status: ${response.status}) ${errorText}`);
         }
       }
       
       return uploadedImages;
     } catch (error) {
       console.error('Error uploading images:', error);
-      return [];
+      throw error;
     } finally {
       setUploadingImages(false);
+    }
+  };
+
+  const uploadVideos = async (productId) => {
+    if (videoFiles.length === 0) {
+      return [];
+    }
+
+    try {
+      setUploadingVideos(true);
+      const uploadedVideos = [];
+
+      for (const file of videoFiles) {
+        const formData = new FormData();
+        formData.append('video', file);
+        formData.append('productId', productId);
+
+        const response = await fetch(getApiUrl('/admin/upload-video'), {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${Cookies.get('token')}`
+          },
+          body: formData
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (!data?.videoUrl) {
+            throw new Error(`Upload succeeded but video URL missing for ${file.name}`);
+          }
+          uploadedVideos.push(data.videoUrl);
+        } else {
+          const errorText = await response.text();
+          throw new Error(`Failed to upload ${file.name} (Status: ${response.status}) ${errorText}`);
+        }
+      }
+
+      return uploadedVideos;
+    } catch (error) {
+      console.error('Error uploading videos:', error);
+      throw error;
+    } finally {
+      setUploadingVideos(false);
     }
   };
 
@@ -179,15 +325,8 @@ const AdminProductManager = () => {
     } else {
       return null;
     }
-    
-    // Ensure path starts with /uploads
-    if (!imagePath.startsWith('/uploads')) {
-      imagePath = `/uploads/${imagePath}`;
-    }
-    
-    // Build complete URL with cache buster
-    const fullUrl = `http://localhost:5000${imagePath}?cache=${Date.now()}`;
-    return fullUrl;
+
+    return getImageUrl(imagePath);
   };
 
   const resetImageState = () => {
@@ -195,6 +334,8 @@ const AdminProductManager = () => {
     imagePreview.forEach(url => URL.revokeObjectURL(url));
     setImageFiles([]);
     setImagePreview([]);
+    setVideoFiles([]);
+    setVideoPreview([]);
   };
 
   const handleAddProduct = async (e) => {
@@ -236,28 +377,48 @@ const AdminProductManager = () => {
         },
         tags: productForm.tags ? productForm.tags.split(',').map(tag => tag.trim()).filter(tag => tag) : [],
         featured: productForm.featured || false,
-        images: productForm.images || []
+        images: (productForm.images || [])
+          .map((image, index) => normalizeImageEntry(image, productForm.name, index))
+          .filter(Boolean),
+        videos: (productForm.videos || [])
+          .map((video, index) => normalizeVideoEntry(video, productForm.name, index))
+          .filter(Boolean)
       };
       
       const response = await adminAPI.createProduct(productData);
       
-      // Upload images if any
+      const updatePayload = {};
+
       if (imageFiles.length > 0) {
         const uploadedImageUrls = await uploadImages(response.data.product._id);
-        
+
         if (uploadedImageUrls.length > 0) {
-          // Convert URLs to proper image objects
-          const imageObjects = uploadedImageUrls.map((url, index) => ({
+          updatePayload.images = uploadedImageUrls.map((url, index) => ({
             url: url,
             alt: `${productData.name} - Image ${index + 1}`,
             isPrimary: index === 0
           }));
-          
-          // Update product with image objects
-          await adminAPI.updateProduct(response.data.product._id, {
-            images: imageObjects
-          });
+        } else {
+          toast.error('Image upload failed. Product was created without images. Please edit product and upload again.');
         }
+      }
+
+      if (videoFiles.length > 0) {
+        const uploadedVideoUrls = await uploadVideos(response.data.product._id);
+
+        if (uploadedVideoUrls.length > 0) {
+          updatePayload.videos = uploadedVideoUrls.map((url, index) => ({
+            url: url,
+            title: `${productData.name} - Video ${index + 1}`,
+            isPrimary: index === 0
+          }));
+        } else {
+          toast.error('Video upload failed. Product was created without videos. Please edit product and upload again.');
+        }
+      }
+
+      if (Object.keys(updatePayload).length > 0) {
+        await adminAPI.updateProduct(response.data.product._id, updatePayload);
       }
       
       toast.success('Product added successfully');
@@ -292,6 +453,47 @@ const AdminProductManager = () => {
         };
       }
 
+      let updatedImages = (productForm.images || [])
+        .map((image, index) => normalizeImageEntry(image, productForm.name, index))
+        .filter(Boolean);
+      let updatedVideos = (productForm.videos || [])
+        .map((video, index) => normalizeVideoEntry(video, productForm.name, index))
+        .filter(Boolean);
+      
+      // Upload new images if any
+      if (imageFiles.length > 0) {
+        const uploadedImageUrls = await uploadImages(selectedProduct._id);
+        
+        if (uploadedImageUrls.length > 0) {
+          // Convert URLs to proper image objects
+          const newImageObjects = uploadedImageUrls.map((url, index) => ({
+            url: url,
+            alt: `${productForm.name} - Image ${updatedImages.length + index + 1}`,
+            isPrimary: updatedImages.length === 0 && index === 0
+          }));
+          
+          updatedImages = [...updatedImages, ...newImageObjects];
+        } else {
+          toast.error('Image upload failed. Existing images were kept unchanged.');
+        }
+      }
+
+      if (videoFiles.length > 0) {
+        const uploadedVideoUrls = await uploadVideos(selectedProduct._id);
+
+        if (uploadedVideoUrls.length > 0) {
+          const newVideoObjects = uploadedVideoUrls.map((url, index) => ({
+            url: url,
+            title: `${productForm.name} - Video ${updatedVideos.length + index + 1}`,
+            isPrimary: updatedVideos.length === 0 && index === 0
+          }));
+
+          updatedVideos = [...updatedVideos, ...newVideoObjects];
+        } else {
+          toast.error('Video upload failed. Existing videos were kept unchanged.');
+        }
+      }
+
       const productData = {
         name: productForm.name,
         description: productForm.description,
@@ -308,7 +510,8 @@ const AdminProductManager = () => {
         },
         tags: productForm.tags ? productForm.tags.split(',').map(tag => tag.trim()).filter(tag => tag) : [],
         featured: productForm.featured || false,
-        images: productForm.images || []
+        images: updatedImages,
+        videos: updatedVideos
       };
       
       await adminAPI.updateProduct(selectedProduct._id, productData);
@@ -316,6 +519,7 @@ const AdminProductManager = () => {
       setShowEditModal(false);
       setSelectedProduct(null);
       resetForm();
+      resetImageState();
       fetchProducts();
     } catch (error) {
       console.error('Error updating product:', error);
@@ -363,27 +567,58 @@ const AdminProductManager = () => {
     }
   };
 
-  const openEditModal = (product) => {
+  const openEditModal = async (product) => {
     setSelectedProduct(product);
-    setProductForm({
-      name: product.name || '',
-      description: product.description || '',
-      shortDescription: product.shortDescription || '',
-      category: product.category || 'rings',
-      subCategory: product.subCategory || '',
-      price: product.price?.toString() || '',
-      originalPrice: product.originalPrice?.toString() || '',
-      discount: product.discount || 0,
-      sku: product.sku || '',
-      weight: product.specifications?.weight?.value?.toString() || product.weight?.toString() || '',
-      material: product.specifications?.metal || product.material || '',
-      purity: product.specifications?.purity || product.purity || '',
-      stockQuantity: (product.stock?.quantity || product.stockQuantity || 0).toString(),
-      featured: product.featured || false,
-      tags: product.tags?.join(', ') || '',
-      images: product.images || []
-    });
+    resetImageState();
     setShowEditModal(true);
+
+    const populate = (p) => {
+      setProductForm({
+        name: p.name || '',
+        description: p.description || '',
+        shortDescription: p.shortDescription || '',
+        category: p.category || 'rings',
+        subCategory: p.subCategory || '',
+        price: p.price?.toString() || '',
+        originalPrice: p.originalPrice?.toString() || '',
+        discount: p.discount || 0,
+        sku: p.sku || '',
+        weight: p.specifications?.weight?.value?.toString() || p.weight?.toString() || '',
+        material: p.specifications?.metal || p.material || '',
+        purity: p.specifications?.purity || p.purity || '',
+        stockQuantity: (p.stock?.quantity ?? p.stockQuantity ?? 0).toString(),
+        featured: p.featured || false,
+        tags: p.tags?.join(', ') || '',
+        images: p.images || [],
+        videos: p.videos || []
+      });
+    };
+
+    // Populate immediately with list data so modal opens fast
+    populate(product);
+
+    try {
+      // Then fetch fresh full data from backend
+      const response = await adminAPI.getProduct(product._id);
+      const fresh = response.data?.product || response.data || product;
+      populate(fresh);
+    } catch (err) {
+      console.warn('Could not fetch fresh product data, using list data:', err.message);
+    }
+  };
+
+  const removeExistingImage = (index) => {
+    setProductForm(prev => ({
+      ...prev,
+      images: prev.images.filter((_, i) => i !== index)
+    }));
+  };
+
+  const removeExistingVideo = (index) => {
+    setProductForm(prev => ({
+      ...prev,
+      videos: prev.videos.filter((_, i) => i !== index)
+    }));
   };
 
   const resetForm = () => {
@@ -403,7 +638,8 @@ const AdminProductManager = () => {
       stockQuantity: '',
       featured: false,
       tags: '',
-      images: []
+      images: [],
+      videos: []
     });
   };
 
@@ -484,10 +720,10 @@ const AdminProductManager = () => {
                 onChange={(e) => setSortBy(e.target.value)}
                 className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gold focus:border-transparent"
               >
+                <option value="createdAt">Sort by Date</option>
                 <option value="name">Sort by Name</option>
                 <option value="price">Sort by Price</option>
                 <option value="stockQuantity">Sort by Stock</option>
-                <option value="createdAt">Sort by Date</option>
               </select>
 
               <button
@@ -908,6 +1144,55 @@ const AdminProductManager = () => {
                         <span className="text-sm text-gray-600">Uploading images...</span>
                       </div>
                     )}
+
+                    <label className="block text-sm font-medium text-gray-700">
+                      Product Videos (Max 5)
+                    </label>
+
+                    <div className="flex items-center justify-center w-full">
+                      <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100">
+                        <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                          <PhotoIcon className="w-8 h-8 mb-4 text-gray-500" />
+                          <p className="mb-2 text-sm text-gray-500">
+                            <span className="font-semibold">Click to upload videos</span>
+                          </p>
+                          <p className="text-xs text-gray-500">MP4, MOV, WebM, AVI (MAX. 25MB each)</p>
+                        </div>
+                        <input
+                          type="file"
+                          className="hidden"
+                          multiple
+                          accept="video/*"
+                          onChange={handleVideoSelect}
+                        />
+                      </label>
+                    </div>
+
+                    {videoPreview.length > 0 && (
+                      <div className="space-y-2">
+                        {videoPreview.map((preview, index) => (
+                          <div key={index} className="relative flex items-center justify-between border border-gray-300 rounded-lg px-3 py-2">
+                            <div className="text-sm text-gray-700 truncate pr-8">
+                              {preview.name}
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => removeVideo(index)}
+                              className="text-red-500 hover:text-red-700 text-lg leading-none"
+                            >
+                              ×
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {uploadingVideos && (
+                      <div className="flex items-center space-x-2">
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gold"></div>
+                        <span className="text-sm text-gray-600">Uploading videos...</span>
+                      </div>
+                    )}
                   </div>
 
                   <div className="flex items-center">
@@ -948,83 +1233,232 @@ const AdminProductManager = () => {
         {/* Edit Product Modal */}
         {showEditModal && selectedProduct && (
           <div className="fixed inset-0 z-50 overflow-y-auto">
-            <div className="flex items-center justify-center min-h-screen px-4">
-              <div className="fixed inset-0 bg-black opacity-50" onClick={() => setShowEditModal(false)}></div>
-              <div className="relative bg-white rounded-lg max-w-2xl w-full p-6">
-                <h2 className="text-xl font-bold mb-4">Edit Product</h2>
+            <div className="flex items-center justify-center min-h-screen px-4 py-8">
+              <div className="fixed inset-0 bg-black opacity-50" onClick={() => { setShowEditModal(false); resetImageState(); }}></div>
+              <div className="relative bg-white rounded-lg max-w-2xl w-full p-6 max-h-screen overflow-y-auto">
+                <div className="flex justify-between items-center mb-4">
+                  <h2 className="text-xl font-bold">Edit Product</h2>
+                  <button type="button" onClick={() => { setShowEditModal(false); resetImageState(); }} className="text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
+                </div>
                 <form onSubmit={handleEditProduct} className="space-y-4">
+
+                  {/* Name & Category */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <input
-                      type="text"
-                      placeholder="Product Name"
-                      value={productForm.name}
-                      onChange={(e) => setProductForm(prev => ({ ...prev, name: e.target.value }))}
-                      className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gold"
-                      required
-                    />
-                    <select
-                      value={productForm.category}
-                      onChange={(e) => setProductForm(prev => ({ ...prev, category: e.target.value }))}
-                      className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gold"
-                      required
-                    >
-                      {categories.slice(1).map(category => (
-                        <option key={category.value} value={category.value}>
-                          {category.label}
-                        </option>
-                      ))}
-                    </select>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-500 mb-1">Product Name *</label>
+                      <input type="text" value={productForm.name}
+                        onChange={(e) => setProductForm(prev => ({ ...prev, name: e.target.value }))}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gold" required />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-500 mb-1">Category *</label>
+                      <select value={productForm.category}
+                        onChange={(e) => setProductForm(prev => ({ ...prev, category: e.target.value }))}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gold" required>
+                        {categories.slice(1).map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+                      </select>
+                    </div>
                   </div>
-                  
-                  <textarea
-                    placeholder="Product Description"
-                    value={productForm.description}
-                    onChange={(e) => setProductForm(prev => ({ ...prev, description: e.target.value }))}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gold"
-                    rows={3}
-                    required
-                  />
 
+                  {/* Short Description & Sub Category */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-500 mb-1">Short Description</label>
+                      <input type="text" value={productForm.shortDescription}
+                        onChange={(e) => setProductForm(prev => ({ ...prev, shortDescription: e.target.value }))}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gold" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-500 mb-1">Sub Category</label>
+                      <input type="text" value={productForm.subCategory}
+                        onChange={(e) => setProductForm(prev => ({ ...prev, subCategory: e.target.value }))}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gold" />
+                    </div>
+                  </div>
+
+                  {/* Description */}
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">Description *</label>
+                    <textarea value={productForm.description}
+                      onChange={(e) => setProductForm(prev => ({ ...prev, description: e.target.value }))}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gold" rows={3} required />
+                  </div>
+
+                  {/* Price, Original Price, Stock */}
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <input
-                      type="number"
-                      placeholder="Price"
-                      value={productForm.price}
-                      onChange={(e) => setProductForm(prev => ({ ...prev, price: e.target.value }))}
-                      className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gold"
-                      required
-                    />
-                    <input
-                      type="number"
-                      placeholder="Original Price (optional)"
-                      value={productForm.originalPrice}
-                      onChange={(e) => setProductForm(prev => ({ ...prev, originalPrice: e.target.value }))}
-                      className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gold"
-                    />
-                    <input
-                      type="number"
-                      placeholder="Stock Quantity"
-                      value={productForm.stockQuantity}
-                      onChange={(e) => setProductForm(prev => ({ ...prev, stockQuantity: e.target.value }))}
-                      className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gold"
-                      required
-                    />
+                    <div>
+                      <label className="block text-xs font-medium text-gray-500 mb-1">Price (NPR) *</label>
+                      <input type="number" value={productForm.price} min="0" step="0.01"
+                        onChange={(e) => setProductForm(prev => ({ ...prev, price: e.target.value }))}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gold" required />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-500 mb-1">Original Price</label>
+                      <input type="number" value={productForm.originalPrice} min="0" step="0.01"
+                        onChange={(e) => setProductForm(prev => ({ ...prev, originalPrice: e.target.value }))}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gold" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-500 mb-1">Stock Quantity *</label>
+                      <input type="number" value={productForm.stockQuantity} min="0"
+                        onChange={(e) => setProductForm(prev => ({ ...prev, stockQuantity: e.target.value }))}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gold" required />
+                    </div>
                   </div>
 
-                  <div className="flex justify-end space-x-4">
-                    <button
-                      type="button"
-                      onClick={() => setShowEditModal(false)}
-                      className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="submit"
-                      disabled={loading}
-                      className="bg-gold text-white px-6 py-2 rounded-lg hover:bg-gold-dark disabled:opacity-50"
-                    >
-                      {loading ? 'Updating...' : 'Update Product'}
+                  {/* Discount & SKU */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-500 mb-1">Discount (%)</label>
+                      <input type="number" value={productForm.discount} min="0" max="100"
+                        onChange={(e) => setProductForm(prev => ({ ...prev, discount: e.target.value }))}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gold" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-500 mb-1">SKU</label>
+                      <input type="text" value={productForm.sku}
+                        onChange={(e) => setProductForm(prev => ({ ...prev, sku: e.target.value }))}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gold" />
+                    </div>
+                  </div>
+
+                  {/* Material, Purity, Weight */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-500 mb-1">Material</label>
+                      <input type="text" placeholder="e.g. Gold, Silver" value={productForm.material}
+                        onChange={(e) => setProductForm(prev => ({ ...prev, material: e.target.value }))}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gold" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-500 mb-1">Purity</label>
+                      <input type="text" placeholder="e.g. 22K, 925" value={productForm.purity}
+                        onChange={(e) => setProductForm(prev => ({ ...prev, purity: e.target.value }))}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gold" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-500 mb-1">Weight (grams)</label>
+                      <input type="number" value={productForm.weight} min="0" step="0.01"
+                        onChange={(e) => setProductForm(prev => ({ ...prev, weight: e.target.value }))}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gold" />
+                    </div>
+                  </div>
+
+                  {/* Tags */}
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">Tags (comma separated)</label>
+                    <input type="text" value={productForm.tags} placeholder="e.g. necklace, gold, gift"
+                      onChange={(e) => setProductForm(prev => ({ ...prev, tags: e.target.value }))}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gold" />
+                  </div>
+
+                  {/* Featured */}
+                  <div className="flex items-center">
+                    <input type="checkbox" id="edit-featured" checked={productForm.featured}
+                      onChange={(e) => setProductForm(prev => ({ ...prev, featured: e.target.checked }))}
+                      className="h-4 w-4 text-gold focus:ring-gold border-gray-300 rounded" />
+                    <label htmlFor="edit-featured" className="ml-2 block text-sm text-gray-900">Featured Product</label>
+                  </div>
+
+                  {/* Existing Images */}
+                  {productForm.images && productForm.images.length > 0 && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Current Images</label>
+                      <div className="grid grid-cols-4 gap-3">
+                        {productForm.images.map((img, index) => (
+                          <div key={index} className="relative">
+                            <img
+                              src={getImageUrl(img)}
+                              alt={`Image ${index + 1}`}
+                              className="w-full h-20 object-cover rounded-lg border border-gray-300"
+                            />
+                            <button type="button" onClick={() => removeExistingImage(index)}
+                              className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs hover:bg-red-600">
+                              &times;
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Upload New Images */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Add New Images (Max 5)</label>
+                    <div className="flex items-center justify-center w-full">
+                      <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100">
+                        <div className="flex flex-col items-center justify-center">
+                          <PhotoIcon className="w-6 h-6 mb-1 text-gray-500" />
+                          <p className="text-xs text-gray-500"><span className="font-semibold">Click to upload</span> PNG, JPG (MAX 5MB each)</p>
+                        </div>
+                        <input type="file" className="hidden" multiple accept="image/*" onChange={handleImageSelect} />
+                      </label>
+                    </div>
+                    {imagePreview.length > 0 && (
+                      <div className="grid grid-cols-4 gap-3 mt-3">
+                        {imagePreview.map((preview, index) => (
+                          <div key={index} className="relative">
+                            <img src={preview} alt={`New ${index + 1}`} className="w-full h-20 object-cover rounded-lg border border-gray-300" />
+                            <button type="button" onClick={() => removeImage(index)}
+                              className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs hover:bg-red-600">&times;</button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {uploadingImages && (
+                      <div className="flex items-center space-x-2 mt-2">
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gold"></div>
+                        <span className="text-sm text-gray-600">Uploading images...</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Existing Videos */}
+                  {productForm.videos && productForm.videos.length > 0 && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Current Videos</label>
+                      <div className="space-y-2">
+                        {productForm.videos.map((vid, index) => (
+                          <div key={index} className="flex items-center justify-between border border-gray-300 rounded-lg px-3 py-2">
+                            <span className="text-sm text-gray-700 truncate pr-4">{vid?.title || vid?.url || `Video ${index + 1}`}</span>
+                            <button type="button" onClick={() => removeExistingVideo(index)}
+                              className="text-red-500 hover:text-red-700 text-lg leading-none flex-shrink-0">&times;</button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Upload New Videos */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Add New Videos (Max 5)</label>
+                    <input type="file" multiple accept="video/*" onChange={handleVideoSelect}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm" />
+                    {videoPreview.length > 0 && (
+                      <div className="space-y-2 mt-3">
+                        {videoPreview.map((preview, index) => (
+                          <div key={index} className="flex items-center justify-between border border-gray-300 rounded-lg px-3 py-2">
+                            <span className="text-sm text-gray-700 truncate pr-4">{preview.name}</span>
+                            <button type="button" onClick={() => removeVideo(index)}
+                              className="text-red-500 hover:text-red-700 text-lg leading-none flex-shrink-0">&times;</button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {uploadingVideos && (
+                      <div className="flex items-center space-x-2 mt-2">
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gold"></div>
+                        <span className="text-sm text-gray-600">Uploading videos...</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex justify-end space-x-4 pt-2">
+                    <button type="button" onClick={() => { setShowEditModal(false); resetImageState(); }}
+                      className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
+                    <button type="submit" disabled={loading}
+                      className="bg-gold text-white px-6 py-2 rounded-lg hover:bg-gold-dark disabled:opacity-50">
+                      {loading ? 'Saving...' : 'Save Changes'}
                     </button>
                   </div>
                 </form>

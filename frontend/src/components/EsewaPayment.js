@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { QrCodeIcon, DevicePhoneMobileIcon, ClockIcon } from '@heroicons/react/24/outline';
+import { QrCodeIcon, ClockIcon } from '@heroicons/react/24/outline';
 import QRCode from 'qrcode.react';
 
 const EsewaPayment = ({ amount, orderId, onPaymentComplete, onPaymentFailed }) => {
@@ -14,7 +13,8 @@ const EsewaPayment = ({ amount, orderId, onPaymentComplete, onPaymentFailed }) =
   useEffect(() => {
     generateQRCode();
     startTimer();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [amount, orderId]);
 
   const generateQRCode = () => {
     const transactionId = `UJ${Date.now()}`;

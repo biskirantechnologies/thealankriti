@@ -15,6 +15,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { Helmet } from 'react-helmet-async';
 import { adminAPI } from '../../services/api';
+import { getImageWithFallback } from '../../utils/api';
 import toast from 'react-hot-toast';
 
 const AdminOrderManager = () => {
@@ -207,7 +208,7 @@ const AdminOrderManager = () => {
   // Helper function to get static file URL
   const getStaticFileUrl = (filePath) => {
     // Get base URL without /api suffix for static files
-    const apiUrl = process.env.REACT_APP_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:5000/api' : 'https://thealankriti-backendd.onrender.com/api');
+    const apiUrl = process.env.REACT_APP_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:5000/api' : 'https://api.thealankriti.com/api');
     const baseUrl = apiUrl.replace('/api', '');
     return `${baseUrl}/${filePath}`;
   };
@@ -660,7 +661,7 @@ const AdminOrderManager = () => {
                                   {item.productSnapshot?.images?.[0] && (
                                     <div className="flex-shrink-0">
                                       <img
-                                        src={`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/${item.productSnapshot.images[0]}`}
+                                        src={getImageWithFallback(item.productSnapshot?.images?.[0]?.url || item.productSnapshot?.images?.[0], item.productSnapshot?.name || 'Product')}
                                         alt={item.productSnapshot.name || 'Product'}
                                         className="w-12 h-12 object-cover rounded border border-gray-200"
                                         onError={(e) => {

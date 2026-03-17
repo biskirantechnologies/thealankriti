@@ -46,7 +46,7 @@ const Collections = () => {
           image: stats.products[0]?.images?.[0] 
             ? (typeof stats.products[0].images[0] === 'string' 
                 ? getImageUrl(stats.products[0].images[0])
-                : stats.products[0].images[0].url || 'https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=500')
+                : getImageUrl(stats.products[0].images[0].url) || 'https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=500')
             : 'https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=500',
           category: category,
           itemCount: stats.count,

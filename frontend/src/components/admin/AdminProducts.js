@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { adminAPI } from '../../services/api';
 import { getImageWithFallback, getImageUrl } from '../../utils/api';
 import { 
@@ -60,11 +60,7 @@ const AdminProducts = () => {
     { value: 'pendants', label: 'Pendants' }
   ];
 
-  useEffect(() => {
-    fetchProducts();
-  }, [currentPage, categoryFilter, searchTerm]);
-
-  const fetchProducts = async () => {
+  const fetchProducts = useCallback(async () => {
     try {
       setLoading(true);
       const params = {
@@ -83,7 +79,11 @@ const AdminProducts = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentPage, searchTerm, categoryFilter]);
+
+  useEffect(() => {
+    fetchProducts();
+  }, [fetchProducts]);
 
   const handleAddProduct = () => {
     // Placeholder for add product functionality

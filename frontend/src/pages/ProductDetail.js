@@ -45,6 +45,8 @@ const ProductDetail = () => {
   const [isWishlisted, setIsWishlisted] = useState(false);
   const [showImageZoom, setShowImageZoom] = useState(false);
   const [activeTab, setActiveTab] = useState('description');
+  const [selectedVideo, setSelectedVideo] = useState(0);
+  const [showVideoModal, setShowVideoModal] = useState(false);
 
   // Fetch product data from backend
   useEffect(() => {
@@ -97,12 +99,15 @@ const ProductDetail = () => {
         const transformedProduct = {
           id: productData._id,
           name: productData.name,
+          category: productData.category,
+          sku: productData.sku,
           price: productData.price,
           originalPrice: productData.originalPrice || null,
           description: productData.description,
           shortDescription: productData.shortDescription || '',
           specifications: specs,
           images: productData.images || [],
+          videos: productData.videos || [],
           sizes: productData.variants?.map(variant => variant.value) || [],
           // Stock information from backend
           inStock: productData.stock?.status === 'in-stock' || productData.stock?.status === 'low-stock',
@@ -264,6 +269,13 @@ const ProductDetail = () => {
     }
   };
 
+  const getImageAltText = (imageEntry, fallback) => {
+    if (imageEntry && typeof imageEntry === 'object' && imageEntry.alt) {
+      return imageEntry.alt;
+    }
+    return fallback;
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 py-12">
@@ -377,8 +389,8 @@ const ProductDetail = () => {
                       }`}
                     >
                       <SafeImage
-                        src={getImageUrl(image?.url)}
-                        alt={image?.alt || `${product.name} ${index + 1}`}
+                        src={getImageUrl(image)}
+                        alt={getImageAltText(image, `${product.name} ${index + 1}`)}
                         className="w-full h-full object-cover object-center"
                         fallbackType="jewelry"
                       />
@@ -397,8 +409,8 @@ const ProductDetail = () => {
                   className="relative h-full bg-white rounded-lg overflow-hidden group"
                 >
                   <SafeImage
-                    src={getImageUrl(product.images?.[selectedImage]?.url)}
-                    alt={product.images?.[selectedImage]?.alt || product.name}
+                    src={getImageUrl(product.images?.[selectedImage])}
+                    alt={getImageAltText(product.images?.[selectedImage], product.name)}
                     className="w-full h-full object-cover object-center cursor-zoom-in"
                     onClick={() => setShowImageZoom(true)}
                     fallbackType="jewelry"
@@ -675,6 +687,47 @@ const ProductDetail = () => {
         </div>
       </div>
 
+      {/* Product Videos */}
+      {product.videos && product.videos.length > 0 && (
+        <div className="bg-gray-50 py-10">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <h3 className="text-2xl font-bold text-gray-900 mb-6">Product Videos</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+              {product.videos.map((video, index) => {
+                const videoUrl = getImageUrl(video?.url || video);
+                return (
+                  <motion.button
+                    key={index}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => { setSelectedVideo(index); setShowVideoModal(true); }}
+                    className="relative bg-black rounded-lg overflow-hidden aspect-video group w-full"
+                  >
+                    <video
+                      src={videoUrl}
+                      className="w-full h-full object-cover opacity-80 group-hover:opacity-60 transition-opacity duration-300"
+                      preload="metadata"
+                    />
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="bg-white bg-opacity-90 rounded-full p-4 group-hover:bg-opacity-100 transition-all duration-300 shadow-lg">
+                        <svg className="w-8 h-8 text-gray-900" viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M8 5v14l11-7z" />
+                        </svg>
+                      </div>
+                    </div>
+                    {video?.title && (
+                      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black to-transparent p-3">
+                        <p className="text-white text-sm font-medium truncate">{video.title}</p>
+                      </div>
+                    )}
+                  </motion.button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Image zoom modal */}
       <AnimatePresence>
         {showImageZoom && (
@@ -699,8 +752,8 @@ const ProductDetail = () => {
                 ×
               </button>
               <SafeImage
-                src={getImageUrl(product.images?.[selectedImage]?.url)}
-                alt={product.images?.[selectedImage]?.alt || product.name}
+                src={getImageUrl(product.images?.[selectedImage])}
+                alt={getImageAltText(product.images?.[selectedImage], product.name)}
                 className="max-w-full max-h-full object-contain"
                 fallbackType="jewelry"
               />
@@ -715,6 +768,57 @@ const ProductDetail = () => {
                   />
                 ))}
               </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+      {/* Video player modal */}
+      <AnimatePresence>
+        {showVideoModal && product.videos && product.videos[selectedVideo] && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-black bg-opacity-90 flex items-center justify-center p-4"
+            onClick={() => setShowVideoModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9 }}
+              animate={{ scale: 1 }}
+              exit={{ scale: 0.9 }}
+              className="relative max-w-4xl w-full"
+              onClick={e => e.stopPropagation()}
+            >
+              <button
+                onClick={() => setShowVideoModal(false)}
+                className="absolute -top-10 right-0 text-white hover:text-gray-300 text-lg font-medium"
+              >
+                ✕ Close
+              </button>
+              <video
+                src={getImageUrl(product.videos[selectedVideo]?.url || product.videos[selectedVideo])}
+                controls
+                autoPlay
+                className="w-full rounded-lg max-h-[75vh]"
+              />
+              {product.videos[selectedVideo]?.title && (
+                <p className="text-white text-center mt-3 font-medium">
+                  {product.videos[selectedVideo].title}
+                </p>
+              )}
+              {product.videos.length > 1 && (
+                <div className="flex justify-center mt-4 space-x-3">
+                  {product.videos.map((_, i) => (
+                    <button
+                      key={i}
+                      onClick={() => setSelectedVideo(i)}
+                      className={`w-3 h-3 rounded-full transition-colors ${
+                        i === selectedVideo ? 'bg-white' : 'bg-gray-500 hover:bg-gray-300'
+                      }`}
+                    />
+                  ))}
+                </div>
+              )}
             </motion.div>
           </motion.div>
         )}

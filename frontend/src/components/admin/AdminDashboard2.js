@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { adminAPI } from '../../services/api';
+import { getImageWithFallback } from '../../utils/api';
 import { 
   ShoppingCartIcon, 
   CurrencyRupeeIcon, 
@@ -205,7 +206,7 @@ const AdminDashboard2 = () => {
                       <div className="flex-shrink-0">
                         <img
                           className="h-8 w-8 sm:h-10 sm:w-10 rounded-md object-cover"
-                          src={product.images?.[0] || '/api/placeholder/40/40'}
+                          src={getImageWithFallback(product.images?.[0]?.url || product.images?.[0], product.name || 'Product')}
                           alt={product.name}
                         />
                       </div>

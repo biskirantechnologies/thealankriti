@@ -5,6 +5,7 @@ import { Toaster } from 'react-hot-toast';
 import Layout from './components/Layout/Layout';
 import { useAuth } from './contexts/AuthContext';
 import SessionManager from './components/SessionManager';
+import AdminLogin from './pages/auth/AdminLogin';
 
 // Simple components for missing imports
 const LoadingSpinner = () => (
@@ -126,7 +127,7 @@ const Contact = React.lazy(() => import('./pages/Contact'));
 // Auth pages
 const Login = React.lazy(() => import('./pages/auth/Login'));
 const Register = React.lazy(() => import('./pages/auth/Register'));
-const AdminLogin = React.lazy(() => import('./pages/auth/AdminLogin'));
+// AdminLogin imported directly above to avoid chunk loading issues
 
 // Admin components
 const AdminDashboard = React.lazy(() => import('./components/admin/AdminDashboard2'));

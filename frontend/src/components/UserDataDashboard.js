@@ -13,6 +13,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { useAuth } from '../contexts/AuthContext';
 import { userAPI } from '../services/api';
+import { getImageWithFallback } from '../utils/api';
 import toast from 'react-hot-toast';
 
 const UserDataDashboard = () => {
@@ -267,7 +268,7 @@ const UserDataDashboard = () => {
                   {wishlist.slice(0, 4).map((item, index) => (
                     <div key={index} className="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg">
                       <img
-                        src={item.productId?.images?.[0]?.url || '/placeholder-image.jpg'}
+                        src={getImageWithFallback(item.productId?.images?.[0]?.url || item.productId?.images?.[0], item.productId?.name || 'Product')}
                         alt={item.productId?.name}
                         className="w-12 h-12 object-cover rounded"
                       />
@@ -306,7 +307,7 @@ const UserDataDashboard = () => {
                   {recentlyViewed.slice(0, 4).map((item, index) => (
                     <div key={index} className="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg">
                       <img
-                        src={item.productId?.images?.[0]?.url || '/placeholder-image.jpg'}
+                        src={getImageWithFallback(item.productId?.images?.[0]?.url || item.productId?.images?.[0], item.productId?.name || 'Product')}
                         alt={item.productId?.name}
                         className="w-12 h-12 object-cover rounded"
                       />
