@@ -10,6 +10,53 @@ const { sendOrderStatusUpdateWhatsApp } = require('../utils/whatsappService');
 
 const router = express.Router();
 
+const normalizeMediaUrl = (value) => {
+  if (!value) return '';
+
+  const raw = typeof value === 'string'
+    ? value
+    : value.url || value.path || value.image || value.video || value.src || '';
+
+  if (typeof raw !== 'string') return '';
+
+  const trimmed = raw.trim();
+  if (!trimmed || trimmed.startsWith('blob:') || trimmed.startsWith('data:')) {
+    return '';
+  }
+
+  const slashNormalized = trimmed.replace(/\\/g, '/');
+
+  if (slashNormalized.startsWith('http://') || slashNormalized.startsWith('https://')) {
+    try {
+      const parsed = new URL(slashNormalized);
+      const uploadsIndex = parsed.pathname.indexOf('/uploads/');
+      if (uploadsIndex !== -1) {
+        return `${parsed.pathname.slice(uploadsIndex)}${parsed.search || ''}`;
+      }
+      return slashNormalized;
+    } catch (error) {
+      return '';
+    }
+  }
+
+  const uploadsIndex = slashNormalized.indexOf('uploads/');
+  if (uploadsIndex !== -1) {
+    return `/${slashNormalized.slice(uploadsIndex).replace(/^\/+/, '')}`;
+  }
+
+  const withoutLeadingSlash = slashNormalized.replace(/^\/+/, '');
+
+  if (withoutLeadingSlash.startsWith('products/')) {
+    return `/uploads/${withoutLeadingSlash}`;
+  }
+
+  if (withoutLeadingSlash.startsWith('uploads/')) {
+    return `/${withoutLeadingSlash}`;
+  }
+
+  return '';
+};
+
 // @route   GET /api/admin/dashboard
 // @desc    Get admin dashboard statistics
 // @access  Private/Admin
@@ -661,7 +708,8 @@ router.post('/products', adminAuth, async (req, res) => {
       stock,
       featured,
       tags,
-      images
+      images,
+      videos
     } = req.body;
 
     // Handle stock quantity - support both formats
@@ -694,20 +742,53 @@ router.post('/products', adminAuth, async (req, res) => {
     // Transform images array to proper format
     const processedImages = Array.isArray(images) ? 
       images.map((image, index) => {
-        // If it's already an object, keep it
-        if (typeof image === 'object' && image !== null && image.url) {
-          return image;
+        const normalizedUrl = normalizeMediaUrl(image);
+        if (!normalizedUrl) {
+          return null;
         }
-        // If it's a string, convert to object
-        if (typeof image === 'string' && image.trim() !== '') {
+
+        if (typeof image === 'object' && image !== null) {
           return {
-            url: image,
-            alt: `${name || 'Product'} image ${index + 1}`,
-            isPrimary: index === 0
+            ...image,
+            url: normalizedUrl,
+            alt: image.alt || `${name || 'Product'} image ${index + 1}`,
+            isPrimary: typeof image.isPrimary === 'boolean' ? image.isPrimary : index === 0
           };
         }
-        return null;
+
+        return {
+          url: normalizedUrl,
+          alt: `${name || 'Product'} image ${index + 1}`,
+          isPrimary: index === 0
+        };
       }).filter(img => img !== null && img.url) : [];
+
+    // Transform videos array to proper format
+    const processedVideos = Array.isArray(videos)
+      ? videos
+        .map((video, index) => {
+          const normalizedUrl = normalizeMediaUrl(video);
+          if (!normalizedUrl) {
+            return null;
+          }
+
+          if (typeof video === 'object' && video !== null) {
+            return {
+              ...video,
+              url: normalizedUrl,
+              title: video.title || `${name || 'Product'} video ${index + 1}`,
+              isPrimary: typeof video.isPrimary === 'boolean' ? video.isPrimary : index === 0
+            };
+          }
+
+          return {
+            url: normalizedUrl,
+            title: `${name || 'Product'} video ${index + 1}`,
+            isPrimary: index === 0
+          };
+        })
+        .filter((item) => item !== null && item.url)
+      : [];
 
     const product = new Product({
       name,
@@ -726,6 +807,7 @@ router.post('/products', adminAuth, async (req, res) => {
       featured: featured || false,
       tags: tags || [],
       images: processedImages,
+      videos: processedVideos,
       isActive: true
     });
 
@@ -763,7 +845,8 @@ router.put('/products/:id', adminAuth, async (req, res) => {
       stock,
       featured,
       tags,
-      images
+      images,
+      videos
     } = req.body;
 
     const product = await Product.findById(req.params.id);
@@ -799,22 +882,57 @@ router.put('/products/:id', adminAuth, async (req, res) => {
     if (images !== undefined) {
       if (Array.isArray(images)) {
         product.images = images.map((image, index) => {
-          // If it's already an object, keep it
-          if (typeof image === 'object' && image !== null && image.url) {
-            return image;
+          const normalizedUrl = normalizeMediaUrl(image);
+          if (!normalizedUrl) {
+            return null;
           }
-          // If it's a string, convert to object
-          if (typeof image === 'string' && image.trim() !== '') {
+
+          if (typeof image === 'object' && image !== null) {
             return {
-              url: image,
-              alt: `${product.name || 'Product'} image ${index + 1}`,
-              isPrimary: index === 0
+              ...image,
+              url: normalizedUrl,
+              alt: image.alt || `${product.name || 'Product'} image ${index + 1}`,
+              isPrimary: typeof image.isPrimary === 'boolean' ? image.isPrimary : index === 0
             };
           }
-          return null;
+
+          return {
+            url: normalizedUrl,
+            alt: `${product.name || 'Product'} image ${index + 1}`,
+            isPrimary: index === 0
+          };
         }).filter(img => img !== null && img.url); // Remove invalid entries
       } else {
         product.images = [];
+      }
+    }
+
+    // Handle videos - convert string array to object array if needed
+    if (videos !== undefined) {
+      if (Array.isArray(videos)) {
+        product.videos = videos.map((video, index) => {
+          const normalizedUrl = normalizeMediaUrl(video);
+          if (!normalizedUrl) {
+            return null;
+          }
+
+          if (typeof video === 'object' && video !== null) {
+            return {
+              ...video,
+              url: normalizedUrl,
+              title: video.title || `${product.name || 'Product'} video ${index + 1}`,
+              isPrimary: typeof video.isPrimary === 'boolean' ? video.isPrimary : index === 0
+            };
+          }
+
+          return {
+            url: normalizedUrl,
+            title: `${product.name || 'Product'} video ${index + 1}`,
+            isPrimary: index === 0
+          };
+        }).filter(item => item !== null && item.url);
+      } else {
+        product.videos = [];
       }
     }
 
@@ -1248,11 +1366,27 @@ const fileFilter = (req, file, cb) => {
   }
 };
 
+const videoFileFilter = (req, file, cb) => {
+  if (file.mimetype.startsWith('video/')) {
+    cb(null, true);
+  } else {
+    cb(new Error('Only video files are allowed!'), false);
+  }
+};
+
 const upload = multer({
   storage: storage,
   fileFilter: fileFilter,
   limits: {
     fileSize: 4 * 1024 * 1024 // 4MB limit
+  }
+});
+
+const videoUpload = multer({
+  storage: storage,
+  fileFilter: videoFileFilter,
+  limits: {
+    fileSize: 25 * 1024 * 1024 // 25MB limit
   }
 });
 
@@ -1299,6 +1433,52 @@ router.post('/upload-image', adminAuth, (req, res) => {
     } catch (error) {
       console.error('Image upload error:', error);
       res.status(500).json({ message: 'Failed to upload image' });
+    }
+  });
+});
+
+// @route   POST /api/admin/upload-video
+// @desc    Upload product video
+// @access  Private/Admin
+router.post('/upload-video', adminAuth, (req, res) => {
+  videoUpload.single('video')(req, res, (err) => {
+    try {
+      if (err) {
+        if (err instanceof multer.MulterError) {
+          if (err.code === 'LIMIT_FILE_SIZE') {
+            return res.status(400).json({
+              message: 'File too large. Maximum size allowed is 25MB.'
+            });
+          }
+          return res.status(400).json({
+            message: `Upload error: ${err.message}`
+          });
+        } else if (err.message === 'Only video files are allowed!') {
+          return res.status(400).json({
+            message: 'Only video files (MP4, MOV, WebM, AVI) are allowed.'
+          });
+        }
+        return res.status(500).json({
+          message: 'Upload failed. Please try again.'
+        });
+      }
+
+      if (!req.file) {
+        return res.status(400).json({ message: 'No video file provided' });
+      }
+
+      const videoUrl = `/uploads/products/${req.file.filename}`;
+
+      res.json({
+        message: 'Video uploaded successfully',
+        videoUrl: videoUrl,
+        filename: req.file.filename,
+        size: req.file.size,
+        originalName: req.file.originalname
+      });
+    } catch (error) {
+      console.error('Video upload error:', error);
+      res.status(500).json({ message: 'Failed to upload video' });
     }
   });
 });

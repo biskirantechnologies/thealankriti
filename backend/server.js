@@ -5,7 +5,11 @@ const morgan = require('morgan');
 const compression = require('compression');
 const rateLimit = require('express-rate-limit');
 const path = require('path');
-require('dotenv').config();
+require('dotenv').config({
+  path: process.env.NODE_ENV === 'production'
+    ? path.join(__dirname, '.env.production')
+    : path.join(__dirname, '.env')
+});
 
 // Session Management Enhancement - Deploy v2.0 - Sept 17, 2025
 
@@ -28,44 +32,36 @@ const app = express();
 // Connect to MongoDB
 connectDB();
 
-// Start keepalive service for production
-if (process.env.NODE_ENV === 'production') {
-  require('./keepalive');
-}
-
-// Security middleware - Modified CSP for image loading
+// Security middleware - Production hardened CSP
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      imgSrc: ["'self'", "data:", "http://localhost:5000", "http://localhost:3000", "http://localhost:3001", "http://localhost:3002", "http://localhost:3003", "http://localhost:3004"],
+      imgSrc: ["'self'", "data:", "https:"],
       styleSrc: ["'self'", "'unsafe-inline'", "https:"],
       scriptSrc: ["'self'"],
-      connectSrc: ["'self'", "http://localhost:5000", "http://localhost:3000", "http://localhost:3001", "http://localhost:3002", "http://localhost:3003", "http://localhost:3004"],
+      connectSrc: ["'self'", "https:"],
+      frameAncestors: ["'self'"],
+      upgradeInsecureRequests: [],
     },
   },
 }));
 app.use(compression());
 
-// Rate limiting - Disabled for development
-// const limiter = rateLimit({
-//   windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000, // 15 minutes
-//   max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100, // limit each IP to 100 requests per windowMs
-//   message: 'Too many requests from this IP, please try again later.'
-// });
-// app.use('/api/', limiter);
+// Rate limiting - Enabled for production
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // limit each IP to 100 requests per windowMs
+  message: 'Too many requests from this IP, please try again later.',
+  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+});
+app.use('/api/', limiter);
 
 // CORS configuration
 const corsOptions = {
   origin: function (origin, callback) {
-    const allowedOrigins = process.env.NODE_ENV === 'production' 
-      ? [
-          'https://thealankriti-frontend.onrender.com',
-          'https://www.thealankriti.com',
-          'https://thealankriti.com',
-          'https://thealankriti.onrender.com'
-        ] 
-      : ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:3002', 'http://localhost:3003', 'http://localhost:3004'];
+    const allowedOrigins = (process.env.CORS_ORIGIN || 'https://thealankriti.com').split(',').map(o => o.trim());
     
     // Allow requests with no origin (mobile apps, curl, etc.)
     if (!origin) return callback(null, true);
@@ -73,14 +69,17 @@ const corsOptions = {
     if (allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
-      console.log(`🚫 CORS blocked origin: ${origin}`);
-      callback(new Error('Not allowed by CORS'));
+      // Log suspicious CORS attempts only in development
+      if (process.env.NODE_ENV !== 'production') {
+        console.log(`CORS blocked origin: ${origin}`);
+      }
+      callback(new Error('CORS policy violation'));
     }
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-  optionsSuccessStatus: 200 // Some legacy browsers choke on 204
+  optionsSuccessStatus: 200
 };
 
 app.use(cors(corsOptions));
@@ -95,41 +94,22 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // Add user activity tracking middleware for all authenticated routes
 // app.use('/api', trackUserActivity);
 
-// Static files with CORS headers - Allow all origins for development
+// Static files with CORS headers - Production secure
 app.use('/uploads', (req, res, next) => {
   // Add CORS headers for static files
-  const allowedOrigins = process.env.NODE_ENV === 'production' 
-    ? [
-        'https://thealankriti-frontend.onrender.com',
-        'https://www.thealankriti.com',
-        'https://thealankriti.com',
-        'https://thealankriti.onrender.com'
-      ] 
-    : ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:3002', 'http://localhost:3003', 'http://localhost:3004'];
+  const allowedOrigins = (process.env.CORS_ORIGIN || 'https://thealankriti.com').split(',').map(o => o.trim());
   
   const origin = req.headers.origin;
   
-  // For development, allow any localhost origin
-  if (process.env.NODE_ENV !== 'production') {
-    if (!origin || origin.includes('localhost')) {
-      res.setHeader('Access-Control-Allow-Origin', origin || '*');
-    }
-  } else {
-    if (allowedOrigins.includes(origin)) {
-      res.setHeader('Access-Control-Allow-Origin', origin);
-    }
+  // Only allow whitelisted origins
+  if (allowedOrigins.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
   }
-  
   res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  // Override helmet's Cross-Origin-Resource-Policy for static assets so that
+  // api.thealankriti.com images can be loaded by thealankriti.com (cross-origin)
   res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
-  
-  // Handle preflight requests
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
-  
   next();
 }, express.static(path.join(__dirname, 'uploads')));
 

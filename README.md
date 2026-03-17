@@ -226,12 +226,6 @@ railway deploy
 
 ### Frontend Deployment
 
-**Vercel**
-```bash
-cd frontend
-vercel --prod
-```
-
 **Netlify**
 ```bash
 cd frontend

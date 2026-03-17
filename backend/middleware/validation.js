@@ -169,7 +169,8 @@ const validateOrder = (req, res, next) => {
       userAgent: Joi.string().optional(),
       platform: Joi.string().optional(),
       timestamp: Joi.string().optional()
-    }).optional()
+    }).optional(),
+    clientOrderToken: Joi.string().max(128).optional()
   });
 
   const { error } = schema.validate(req.body);

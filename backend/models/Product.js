@@ -57,6 +57,17 @@ const productSchema = new mongoose.Schema({
       default: false
     }
   }],
+  videos: [{
+    url: {
+      type: String,
+      required: true
+    },
+    title: String,
+    isPrimary: {
+      type: Boolean,
+      default: false
+    }
+  }],
   specifications: {
     metal: {
       type: String,

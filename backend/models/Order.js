@@ -6,6 +6,12 @@ const orderSchema = new mongoose.Schema({
     unique: true,
     required: false // Auto-generated in pre-save hook
   },
+  clientOrderToken: {
+    type: String,
+    trim: true,
+    unique: true,
+    sparse: true
+  },
   customer: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
@@ -261,5 +267,6 @@ orderSchema.index({ customer: 1, createdAt: -1 });
 orderSchema.index({ status: 1 });
 orderSchema.index({ 'payment.status': 1 });
 orderSchema.index({ createdAt: -1 });
+orderSchema.index({ clientOrderToken: 1 }, { unique: true, sparse: true });
 
 module.exports = mongoose.model('Order', orderSchema);

@@ -170,11 +170,13 @@ router.post('/upload-screenshot', upload.single('screenshot'), async (req, res) 
       });
     }
 
+    const normalizedScreenshotPath = `/${req.file.path.replace(/\\/g, '/').replace(/^\/+/, '')}`;
+
     // Store screenshot information for guest users
     const screenshotData = {
       filename: req.file.filename,
       originalname: req.file.originalname,
-      path: req.file.path,
+      path: normalizedScreenshotPath,
       size: req.file.size,
       transactionId,
       amount: parseFloat(amount),
@@ -197,7 +199,7 @@ router.post('/upload-screenshot', upload.single('screenshot'), async (req, res) 
       screenshot: {
         filename: req.file.filename,
         originalname: req.file.originalname,
-        path: req.file.path,
+        path: normalizedScreenshotPath,
         transactionId,
         amount,
         uploadedAt: screenshotData.uploadedAt,

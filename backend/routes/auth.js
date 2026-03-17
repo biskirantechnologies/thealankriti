@@ -77,52 +77,15 @@ router.post('/login', validateLogin, async (req, res) => {
       return res.status(401).json({ message: 'Invalid email or password' });
     }
 
-    // Update last login and activity with comprehensive data tracking
-    if (!user.activity) {
-      user.activity = {
-        loginCount: 0,
-        totalOrders: 0,
-        totalSpent: 0,
-        averageOrderValue: 0,
-        lastViewedProducts: [],
-        wishlist: [],
-        browsingHistory: [],
-        sessionData: {}
-      };
+    // Update last login (simplified to avoid validation issues)
+    user.lastLogin = new Date();
+    
+    try {
+      await user.save();
+    } catch (saveError) {
+      console.error('Error saving user login data:', saveError);
+      // Continue login even if saving login data fails
     }
-    
-    // Capture detailed login information
-    const loginData = {
-      timestamp: new Date(),
-      ipAddress: req.ip || req.connection.remoteAddress || req.socket.remoteAddress,
-      userAgent: req.get('User-Agent'),
-      platform: req.get('User-Agent') ? req.get('User-Agent').includes('Mobile') ? 'Mobile' : 'Desktop' : 'Unknown'
-    };
-    
-    user.activity.lastLogin = new Date();
-    user.activity.loginCount = (user.activity.loginCount || 0) + 1;
-    
-    // Store login history (keep last 10 logins)
-    if (!user.activity.loginHistory) {
-      user.activity.loginHistory = [];
-    }
-    user.activity.loginHistory.unshift(loginData);
-    if (user.activity.loginHistory.length > 10) {
-      user.activity.loginHistory = user.activity.loginHistory.slice(0, 10);
-    }
-    
-    // Update session data
-    user.activity.sessionData = {
-      currentSession: {
-        startTime: new Date(),
-        lastActivity: new Date(),
-        pageViews: 0,
-        actions: []
-      }
-    };
-    
-    // Save all user data to database
-    await user.save();
 
     // Generate JWT tokens
     const token = generateToken(user._id);
@@ -143,7 +106,15 @@ router.post('/login', validateLogin, async (req, res) => {
     });
   } catch (error) {
     console.error('Login error:', error);
-    res.status(500).json({ message: 'Server error during login' });
+    console.error('Error details:', {
+      message: error.message,
+      stack: error.stack,
+      name: error.name
+    });
+    res.status(500).json({ 
+      message: 'Server error during login',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 });
 

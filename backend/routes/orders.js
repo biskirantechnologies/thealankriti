@@ -26,7 +26,8 @@ router.post('/', validateOrder, async (req, res) => {
       couponDiscount, 
       notes, 
       orderSource,
-      deviceInfo 
+      deviceInfo,
+      clientOrderToken
     } = req.body;
 
     console.log('Received order data:', {
@@ -34,8 +35,51 @@ router.post('/', validateOrder, async (req, res) => {
       customerInfo,
       shippingAddress,
       payment,
-      pricing
+      pricing,
+      clientOrderToken
     });
+
+    // Idempotency check: prevent duplicate order creation on repeated submits/retries
+    if (clientOrderToken) {
+      const existingOrder = await Order.findOne({ clientOrderToken });
+      if (existingOrder) {
+        return res.status(200).json({
+          message: 'Order already created for this checkout request',
+          order: {
+            id: existingOrder._id,
+            orderNumber: existingOrder.orderNumber,
+            total: existingOrder.pricing.total,
+            status: existingOrder.status,
+            customerInfo: existingOrder.customerInfo,
+            shippingAddress: existingOrder.shippingAddress,
+            items: existingOrder.items
+          }
+        });
+      }
+    }
+
+    // Fallback dedupe for older clients: same payment transaction + same customer email
+    if (payment?.transactionId && customerInfo?.email) {
+      const existingByTransaction = await Order.findOne({
+        'payment.transactionId': payment.transactionId,
+        'customerInfo.email': customerInfo.email
+      });
+
+      if (existingByTransaction) {
+        return res.status(200).json({
+          message: 'Order already created for this transaction',
+          order: {
+            id: existingByTransaction._id,
+            orderNumber: existingByTransaction.orderNumber,
+            total: existingByTransaction.pricing.total,
+            status: existingByTransaction.status,
+            customerInfo: existingByTransaction.customerInfo,
+            shippingAddress: existingByTransaction.shippingAddress,
+            items: existingByTransaction.items
+          }
+        });
+      }
+    }
 
     // Validate and process order items
     let calculatedSubtotal = 0;
@@ -103,6 +147,7 @@ router.post('/', validateOrder, async (req, res) => {
 
     // Create order (support both authenticated users and guests)
     const order = new Order({
+      clientOrderToken: clientOrderToken || undefined,
       customer: req.user?.id || null, // Optional for guest users
       customerInfo: {
         email: customerInfo?.email || req.user?.email,
@@ -235,6 +280,28 @@ router.post('/', validateOrder, async (req, res) => {
       }
     });
   } catch (error) {
+    if (error.code === 11000 && error.keyPattern?.clientOrderToken && req.body?.clientOrderToken) {
+      try {
+        const existingOrder = await Order.findOne({ clientOrderToken: req.body.clientOrderToken });
+        if (existingOrder) {
+          return res.status(200).json({
+            message: 'Order already created for this checkout request',
+            order: {
+              id: existingOrder._id,
+              orderNumber: existingOrder.orderNumber,
+              total: existingOrder.pricing.total,
+              status: existingOrder.status,
+              customerInfo: existingOrder.customerInfo,
+              shippingAddress: existingOrder.shippingAddress,
+              items: existingOrder.items
+            }
+          });
+        }
+      } catch (lookupError) {
+        console.error('Duplicate token lookup error:', lookupError);
+      }
+    }
+
     console.error('Create order error:', error);
     res.status(500).json({ 
       message: 'Server error while creating order',

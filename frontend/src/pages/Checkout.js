@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -35,6 +35,13 @@ const Checkout = () => {
   const [isUploadingScreenshot, setIsUploadingScreenshot] = useState(false);
   const [orderSubmitted, setOrderSubmitted] = useState(false); // Track if order was successfully submitted
   const [isScreenshotSubmission, setIsScreenshotSubmission] = useState(false);
+  const orderProcessingRef = useRef(false);
+  const [checkoutToken] = useState(() => {
+    if (window.crypto?.randomUUID) {
+      return window.crypto.randomUUID();
+    }
+    return `chk_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+  });
   
   const [shippingInfo, setShippingInfo] = useState({
     firstName: user?.firstName || '',
@@ -170,6 +177,10 @@ const Checkout = () => {
   };
 
   const submitPaymentScreenshot = async () => {
+    if (isUploadingScreenshot || orderProcessingRef.current || orderSubmitted) {
+      return;
+    }
+
     if (!paymentScreenshot) {
       toast.error('Please upload a payment screenshot');
       return;
@@ -369,6 +380,13 @@ const Checkout = () => {
   };
 
   const processOrder = async (order = null) => {
+    if (orderProcessingRef.current || orderSubmitted) {
+      console.log('⏭️ Skipping duplicate order submission attempt');
+      return;
+    }
+
+    orderProcessingRef.current = true;
+
     try {
       console.log('🔄 Processing order:', order);
       
@@ -478,7 +496,8 @@ const Checkout = () => {
           userAgent: navigator.userAgent,
           platform: navigator.platform,
           timestamp: new Date().toISOString()
-        }
+        },
+        clientOrderToken: checkoutToken
       };
 
       console.log('📤 Sending order data to API:', orderData);
@@ -606,6 +625,7 @@ const Checkout = () => {
         }
         
         setPaymentStatus('failed');
+        orderProcessingRef.current = false;
       }
     }
   };

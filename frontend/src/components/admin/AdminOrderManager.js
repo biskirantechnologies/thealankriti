@@ -15,7 +15,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { Helmet } from 'react-helmet-async';
 import { adminAPI } from '../../services/api';
-import { getImageWithFallback } from '../../utils/api';
+import { getImageUrl, getImageWithFallback } from '../../utils/api';
 import toast from 'react-hot-toast';
 
 const AdminOrderManager = () => {
@@ -213,6 +213,28 @@ const AdminOrderManager = () => {
     return `${baseUrl}/${filePath}`;
   };
 
+  const getPaymentScreenshotUrl = (filePath) => {
+    if (!filePath || typeof filePath !== 'string') {
+      return '';
+    }
+
+    const normalizedPath = filePath.replace(/\\/g, '/').trim();
+
+    if (!normalizedPath) {
+      return '';
+    }
+
+    if (normalizedPath.startsWith('http://') || normalizedPath.startsWith('https://')) {
+      return normalizedPath;
+    }
+
+    if (normalizedPath.includes('/uploads/') || normalizedPath.startsWith('/uploads/') || normalizedPath.startsWith('uploads/')) {
+      return getImageUrl(normalizedPath);
+    }
+
+    return getStaticFileUrl(normalizedPath.replace(/^\/+/, ''));
+  };
+
   const viewPaymentScreenshot = (screenshot) => {
     console.log('🔍 viewPaymentScreenshot called with:', screenshot);
     console.log('🔍 Screenshot type:', typeof screenshot);
@@ -274,32 +296,18 @@ const AdminOrderManager = () => {
       console.log('📁 Removed leading slash, path now:', screenshotPath);
     }
 
-    // Construct the full URL using the helper function
-    const screenshotUrl = screenshotPath.startsWith('http') 
-      ? screenshotPath 
-      : getStaticFileUrl(screenshotPath);
+    // Construct the full URL using normalized uploads path handling
+    const screenshotUrl = getPaymentScreenshotUrl(screenshotPath);
       
     console.log('🔗 Final screenshot URL:', screenshotUrl);
-    
-    // Test the URL accessibility
-    fetch(screenshotUrl, { method: 'HEAD' })
-      .then(response => {
-        console.log('🌐 URL accessibility test:', response.status, response.statusText);
-        if (!response.ok) {
-          console.warn('⚠️ Screenshot URL returned non-OK status:', response.status);
-          toast.error(`Screenshot file not found (${response.status})`);
-        } else {
-          // Open screenshot in modal instead of new window
-          setCurrentScreenshotUrl(screenshotUrl);
-          setShowScreenshotModal(true);
-        }
-      })
-      .catch(error => {
-        console.warn('⚠️ Failed to test screenshot URL accessibility:', error);
-        // Still try to show it in modal even if test fails
-        setCurrentScreenshotUrl(screenshotUrl);
-        setShowScreenshotModal(true);
-      });
+
+    if (!screenshotUrl) {
+      toast.error('Screenshot URL could not be generated');
+      return;
+    }
+
+    setCurrentScreenshotUrl(screenshotUrl);
+    setShowScreenshotModal(true);
   };
 
   const exportOrders = async () => {
@@ -865,13 +873,140 @@ const AdminOrderManager = () => {
                   </button>
                 </div>
 
-                {/* Order details content - simplified for debug */}
                 <div className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <h3 className="text-sm font-semibold text-gray-900 mb-3">Order Summary</h3>
+                      <div className="space-y-2 text-sm text-gray-700">
+                        <div><span className="font-medium">Order Number:</span> {selectedOrder.orderNumber || 'N/A'}</div>
+                        <div><span className="font-medium">Date:</span> {formatDate(selectedOrder.createdAt)}</div>
+                        <div><span className="font-medium">Status:</span> <span className={`ml-1 px-2 py-1 rounded-full text-xs ${getStatusColor(selectedOrder.status)}`}>{selectedOrder.status}</span></div>
+                        <div><span className="font-medium">Payment:</span> {selectedOrder.payment?.method === 'esewa' ? 'eSewa' : selectedOrder.payment?.method === 'cod' ? 'Cash on Delivery' : selectedOrder.payment?.method || 'N/A'}</div>
+                        <div><span className="font-medium">Payment Status:</span> {selectedOrder.payment?.status || 'N/A'}</div>
+                        <div><span className="font-medium">Transaction ID:</span> {selectedOrder.payment?.transactionId || 'N/A'}</div>
+                      </div>
+                    </div>
+
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <h3 className="text-sm font-semibold text-gray-900 mb-3">Customer</h3>
+                      <div className="space-y-2 text-sm text-gray-700">
+                        <div><span className="font-medium">Name:</span> {selectedOrder.customerInfo?.firstName} {selectedOrder.customerInfo?.lastName}</div>
+                        <div><span className="font-medium">Email:</span> {selectedOrder.customerInfo?.email || 'N/A'}</div>
+                        <div><span className="font-medium">Phone:</span> {selectedOrder.customerInfo?.phone || 'N/A'}</div>
+                        <div><span className="font-medium">Type:</span> {selectedOrder.customerInfo?.isGuest ? 'Guest' : 'Registered User'}</div>
+                      </div>
+                    </div>
+
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <h3 className="text-sm font-semibold text-gray-900 mb-3">Payment Screenshot</h3>
+                      {selectedOrder.payment?.screenshot ? (
+                        <div className="space-y-2 text-sm text-gray-700">
+                          <div>
+                            <span className="font-medium">Verification:</span>{' '}
+                            <span className={`px-2 py-1 rounded-full text-xs ${
+                              selectedOrder.payment?.screenshot?.status === 'verified' ? 'bg-green-100 text-green-800' :
+                              selectedOrder.payment?.screenshot?.status === 'pending_verification' ? 'bg-amber-100 text-amber-800' :
+                              selectedOrder.payment?.screenshot?.status === 'rejected' ? 'bg-red-100 text-red-800' :
+                              'bg-gray-100 text-gray-800'
+                            }`}>
+                              {selectedOrder.payment?.screenshot?.status || 'Unknown'}
+                            </span>
+                          </div>
+                          <div><span className="font-medium">File:</span> {selectedOrder.payment?.screenshot?.originalname || selectedOrder.payment?.screenshot?.filename || 'N/A'}</div>
+                          <div><span className="font-medium">Uploaded:</span> {formatDate(selectedOrder.payment?.screenshot?.uploadedAt)}</div>
+                          {(selectedOrder.payment?.screenshot?.filename || selectedOrder.payment?.screenshot?.path) && (
+                            <button
+                              onClick={() => viewPaymentScreenshot(selectedOrder.payment.screenshot)}
+                              className="text-blue-600 hover:text-blue-800 underline text-sm"
+                            >
+                              View Screenshot
+                            </button>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="text-sm text-gray-500">No screenshot submitted</div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="bg-white border rounded-lg p-4">
+                      <h3 className="text-sm font-semibold text-gray-900 mb-3">Shipping Address</h3>
+                      <div className="text-sm text-gray-700 space-y-1">
+                        <div>{selectedOrder.shippingAddress?.firstName} {selectedOrder.shippingAddress?.lastName}</div>
+                        <div>{selectedOrder.shippingAddress?.street}</div>
+                        {selectedOrder.shippingAddress?.apartment && <div>{selectedOrder.shippingAddress.apartment}</div>}
+                        <div>{selectedOrder.shippingAddress?.city}, {selectedOrder.shippingAddress?.state} {selectedOrder.shippingAddress?.zipCode}</div>
+                        <div>{selectedOrder.shippingAddress?.country}</div>
+                        <div>{selectedOrder.shippingAddress?.phone}</div>
+                        <div>{selectedOrder.shippingAddress?.email}</div>
+                        {selectedOrder.shippingAddress?.landmark && <div>Landmark: {selectedOrder.shippingAddress.landmark}</div>}
+                      </div>
+                    </div>
+
+                    <div className="bg-white border rounded-lg p-4">
+                      <h3 className="text-sm font-semibold text-gray-900 mb-3">Billing Address</h3>
+                      {selectedOrder.billingAddress?.street ? (
+                        <div className="text-sm text-gray-700 space-y-1">
+                          <div>{selectedOrder.billingAddress?.firstName} {selectedOrder.billingAddress?.lastName}</div>
+                          <div>{selectedOrder.billingAddress?.street}</div>
+                          {selectedOrder.billingAddress?.apartment && <div>{selectedOrder.billingAddress.apartment}</div>}
+                          <div>{selectedOrder.billingAddress?.city}, {selectedOrder.billingAddress?.state} {selectedOrder.billingAddress?.zipCode}</div>
+                          <div>{selectedOrder.billingAddress?.country}</div>
+                          <div>{selectedOrder.billingAddress?.phone}</div>
+                          <div>{selectedOrder.billingAddress?.email}</div>
+                        </div>
+                      ) : (
+                        <div className="text-sm text-gray-500">Same as shipping / not provided</div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="bg-white border rounded-lg p-4">
+                    <h3 className="text-sm font-semibold text-gray-900 mb-4">Ordered Products</h3>
+                    <div className="space-y-4">
+                      {selectedOrder.items?.map((item, index) => {
+                        const productImage = item.productSnapshot?.image || item.product?.images?.[0]?.url || item.product?.image;
+                        const productName = item.productSnapshot?.name || item.product?.name || 'Unknown Product';
+
+                        return (
+                          <div key={item._id || index} className="flex items-start gap-4 border rounded-lg p-4">
+                            <div className="h-20 w-20 flex-shrink-0 overflow-hidden rounded-lg border bg-gray-50">
+                              <img
+                                src={getImageUrl(productImage) || getImageWithFallback(null, productName)}
+                                alt={productName}
+                                className="h-full w-full object-cover"
+                              />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="text-sm font-semibold text-gray-900">{productName}</div>
+                              {item.productSnapshot?.sku && (
+                                <div className="text-sm text-gray-500 mt-1">SKU: {item.productSnapshot.sku}</div>
+                              )}
+                              {item.variant?.value && (
+                                <div className="text-sm text-gray-500 mt-1">Variant: {item.variant.value}</div>
+                              )}
+                              <div className="text-sm text-gray-600 mt-1">Quantity: {item.quantity || 1}</div>
+                              <div className="text-sm text-gray-600">Unit Price: {formatPrice(item.productSnapshot?.price || item.price || 0)}</div>
+                            </div>
+                            <div className="text-sm font-semibold text-gray-900 whitespace-nowrap">
+                              {formatPrice((item.quantity || 1) * (item.productSnapshot?.price || item.price || 0))}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
                   <div className="bg-gray-50 rounded-lg p-4">
-                    <h3 className="text-lg font-semibold mb-4">Order Information</h3>
-                    <pre className="text-xs bg-gray-100 p-3 rounded overflow-auto">
-                      {JSON.stringify(selectedOrder, null, 2)}
-                    </pre>
+                    <h3 className="text-sm font-semibold text-gray-900 mb-3">Pricing</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-gray-700">
+                      <div>Subtotal: <span className="font-medium">{formatPrice(selectedOrder.pricing?.subtotal || 0)}</span></div>
+                      <div>Shipping: <span className="font-medium">{formatPrice(selectedOrder.pricing?.shippingCost || 0)}</span></div>
+                      <div>Tax: <span className="font-medium">{formatPrice(selectedOrder.pricing?.tax || 0)}</span></div>
+                      <div>Discount: <span className="font-medium">{formatPrice(selectedOrder.pricing?.discount || 0)}</span></div>
+                      <div className="md:col-span-2 text-base text-gray-900">Total: <span className="font-bold">{formatPrice(selectedOrder.pricing?.total || 0)}</span></div>
+                    </div>
                   </div>
                 </div>
 

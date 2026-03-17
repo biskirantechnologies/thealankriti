@@ -1,3 +1,10 @@
+const path = require('path');
+require('dotenv').config({
+  path: process.env.NODE_ENV === 'production'
+    ? path.join(__dirname, '..', '.env.production')
+    : path.join(__dirname, '..', '.env')
+});
+
 const mongoose = require('mongoose');
 const Product = require('../models/Product');
 
@@ -216,7 +223,8 @@ const sampleProducts = [
 async function seedProducts() {
   try {
     // Connect to MongoDB using the database config
-    require('../config/database');
+    const connectDB = require('../config/database');
+    await connectDB();
     console.log('Connected to MongoDB');
 
     // Clear existing products

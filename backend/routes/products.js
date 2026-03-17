@@ -11,8 +11,8 @@ const router = express.Router();
 router.get('/', async (req, res) => {
   try {
     const {
-      page = 1,
-      limit = 12,
+      page = '1',
+      limit = '12',
       category,
       subCategory,
       metal,
@@ -25,6 +25,10 @@ router.get('/', async (req, res) => {
       featured,
       trending
     } = req.query;
+
+    // Safely parse page and limit
+    const pageNum = Math.max(1, parseInt(page) || 1);
+    const limitNum = Math.max(1, Math.min(100, parseInt(limit) || 12));
 
     // Build filter object
     const filter = { isActive: true };
@@ -39,8 +43,14 @@ router.get('/', async (req, res) => {
     // Price range filter
     if (minPrice || maxPrice) {
       filter.price = {};
-      if (minPrice) filter.price.$gte = parseFloat(minPrice);
-      if (maxPrice) filter.price.$lte = parseFloat(maxPrice);
+      if (minPrice) {
+        const minVal = parseFloat(minPrice);
+        if (!isNaN(minVal)) filter.price.$gte = minVal;
+      }
+      if (maxPrice) {
+        const maxVal = parseFloat(maxPrice);
+        if (!isNaN(maxVal)) filter.price.$lte = maxVal;
+      }
     }
 
     // Search filter
@@ -48,38 +58,48 @@ router.get('/', async (req, res) => {
       filter.$text = { $search: search };
     }
 
-    // Sort options
+    // Sort options with validation
     const sortOptions = {};
-    sortOptions[sortBy] = sortOrder === 'desc' ? -1 : 1;
+    const validSortFields = ['createdAt', 'price', 'name', 'averageRating', 'totalReviews'];
+    const sortField = validSortFields.includes(sortBy) ? sortBy : 'createdAt';
+    sortOptions[sortField] = sortOrder === 'asc' ? 1 : -1;
 
     // Calculate pagination
-    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const skip = (pageNum - 1) * limitNum;
 
-    // Execute query
+    // Execute query with timeout and error handling
     const products = await Product.find(filter)
       .sort(sortOptions)
       .skip(skip)
-      .limit(parseInt(limit))
-      .select('-reviews'); // Exclude reviews for performance
+      .limit(limitNum)
+      .select('-reviews') // Exclude reviews for performance
+      .lean() // Use lean() for read-only performance
+      .exec();
 
     // Get total count for pagination
     const totalProducts = await Product.countDocuments(filter);
-    const totalPages = Math.ceil(totalProducts / parseInt(limit));
+    const totalPages = Math.ceil(totalProducts / limitNum);
 
     res.json({
-      products,
+      success: true,
+      products: products || [],
       pagination: {
-        currentPage: parseInt(page),
-        totalPages,
-        totalProducts,
-        limit: parseInt(limit),
-        hasNext: page < totalPages,
-        hasPrev: page > 1
+        currentPage: pageNum,
+        totalPages: totalPages || 1,
+        totalProducts: totalProducts || 0,
+        limit: limitNum,
+        hasNext: pageNum < totalPages,
+        hasPrev: pageNum > 1
       }
     });
   } catch (error) {
-    console.error('Get products error:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error('❌ Get products error:', error.message);
+    console.error('   Stack:', error.stack);
+    res.status(500).json({ 
+      success: false,
+      message: 'Server error retrieving products',
+      error: process.env.NODE_ENV === 'production' ? undefined : error.message
+    });
   }
 });
 

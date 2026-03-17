@@ -5,11 +5,14 @@
   "main": "server.js",
   "scripts": {
     "build": "echo 'No build step required for backend'",
-    "start": "NODE_ENV=production node server.js",
+    "start": "node -e \"process.env.NODE_ENV='production'\" && node server.js",
+    "start:prod": "set NODE_ENV=production && node server.js",
     "start:dev": "nodemon server.js",
     "dev": "nodemon server.js",
     "test": "jest",
     "seed": "node scripts/seedData.js",
+    "fix:product-images": "node scripts/fixProductImages.js",
+    "fix:product-images:dry": "node scripts/fixProductImages.js --dry-run",
     "health": "curl -f http://localhost:${PORT:-10000}/health || exit 1"
   },
   "keywords": [
